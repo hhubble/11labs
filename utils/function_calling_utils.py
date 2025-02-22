@@ -66,7 +66,7 @@ class FunctionCaller:
         self.model = "groq/llama-3.1-8b-instant"
         logger.info(f"Initialized FunctionCaller with model: {self.model}")
 
-    async def determine_action(self, text: str) -> tuple[ActionType, Dict[str, Any]]:
+    async def determine_action(self, text: str, full_context) -> tuple[ActionType, Dict[str, Any]]:
         try:
             logger.info("Determining action from user input")
             logger.debug(f"Input text: {text[:100]}...")
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             import time
 
             print(f"Input: {input_text}")
-            action, details = await caller.determine_action(input_text)
+            action, details = await caller.determine_action(input_text, "test context")
             print(f"Action Type: {action}")
             print(f"Details: {details}\n")
 

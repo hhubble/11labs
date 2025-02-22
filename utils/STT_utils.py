@@ -8,11 +8,16 @@ logger = logging.getLogger(__name__)
 
 
 class AudioTranscriptionHandler:
-    def __init__(self, trigger_word="hey steve", buffer_size=20):
+    def __init__(
+        self,
+        trigger_phrases={"hey eleven labs", "hey 11 labs", "hey eleven laps", "hey 11 laps"},
+        buffer_size=5,
+    ):
         self.deepgram = DeepgramClient(os.environ.get("DEEPGRAM_API_KEY"))
         self.dg_connection = None
+        self.trigger_phrases = trigger_phrases
+        self.buffer_size = buffer_size
         logger.info("Initialized AudioTranscriptionHandler")
-        # Store these as instance variables
         self._is_listening_active = False
         self._current_text = ""
         self._transcription_buffer = []
@@ -20,8 +25,6 @@ class AudioTranscriptionHandler:
     async def initialize_connection(self):
         try:
             self.dg_connection = self.deepgram.listen.asyncwebsocket.v("1")
-
-            # Create closure to access parent instance variables
             parent = self
 
             async def on_message(msg_self, result, **kwargs):
@@ -36,14 +39,27 @@ class AudioTranscriptionHandler:
                     return
 
                 if is_final:
+                    # Keep only the last buffer_size transcripts
                     parent._transcription_buffer.append(cleaned_transcript)
+                    if len(parent._transcription_buffer) > parent.buffer_size:
+                        parent._transcription_buffer.pop(0)
+
                     logger.info(f"cleaned_transcript: {cleaned_transcript}")
                     logger.info(f"is_listening_active: {parent._is_listening_active}")
-                    if not parent._is_listening_active and "hey steve" in cleaned_transcript:
-                        context = " ".join(parent._transcription_buffer)
-                        logger.info(f"🎯 Trigger word detected. Full context: '{context}'")
-                        print(f"\n🎯 Activated! Full context: '{context}'")
-                        parent._is_listening_active = True
+
+                    # Get the last few chunks combined
+                    context = " ".join(parent._transcription_buffer)
+
+                    # Check if any trigger phrase is in the combined context
+                    if not parent._is_listening_active:
+                        for trigger in parent.trigger_phrases:
+                            if trigger in context:
+                                logger.info(
+                                    f"🎯 Trigger phrase detected. Full context: '{context}'"
+                                )
+                                print(f"\n🎯 Activated! Full context: '{context}'")
+                                parent._is_listening_active = True
+                                break
 
                     elif parent._is_listening_active:
                         logger.info(f"🎤 Final transcription: '{cleaned_transcript}'")
@@ -80,20 +96,24 @@ class AudioTranscriptionHandler:
             logger.exception(f"Error initializing Deepgram connection: {e}")
             raise
 
-    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str]:
+    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str, str]:
         try:
             if not self.dg_connection:
                 await self.initialize_connection()
 
+            # Capture and clear text before processing new chunk
+            text = self._current_text
+            self._current_text = ""  # Clear before processing new chunk
+
+            # Get context and send new audio data
+            context = " ".join(self._transcription_buffer) if self._transcription_buffer else ""
             await self.dg_connection.send(audio_bytes)
 
-            text = self._current_text
-            self._current_text = ""  # Clear the current text
-            return self._is_listening_active, text
+            return self._is_listening_active, text, context
 
         except Exception as e:
             logger.exception(f"Error processing audio chunk: {e}")
-            return False, ""
+            return False, "", ""
 
     async def close(self):
         if self.dg_connection:

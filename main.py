@@ -46,24 +46,27 @@ async def websocket_endpoint(websocket: WebSocket):
             # logger.debug(f"Received {len(audio_data)} bytes of audio data")
 
             # Process the audio chunk
-            is_active, text = await transcription_handler.process_audio_chunk(audio_data)
+            is_active, text, full_context = await transcription_handler.process_audio_chunk(audio_data)
 
             if text:
                 logger.info(f"Transcribed text: {text}")
 
                 if is_active:
                     logger.debug("System is actively listening")
-                    # Determine action when system is actively listening
-                    action_type, details = await function_caller.determine_action(text)
+                    # Pass both the immediate text and context to determine_action
+                    action_type, details = await function_caller.determine_action(
+                        text, full_context
+                    )
 
                     # Process the action and get response
                     action_response = await action_handler.process_action(
                         action_type, text, details
                     )
-    
+
                     # Send response back to client
                     response = {
                         "transcription": text,
+                        "context": context,
                         "action": action_type.value,
                         "details": details,
                         "response": action_response,
