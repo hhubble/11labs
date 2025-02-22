@@ -8,53 +8,47 @@ logger = logging.getLogger(__name__)
 
 
 class AudioTranscriptionHandler:
-    def __init__(self, trigger_word="hey steve", buffer_size=5):
+    def __init__(self, trigger_word="hey steve", buffer_size=20):
         self.deepgram = DeepgramClient(os.environ.get("DEEPGRAM_API_KEY"))
         self.dg_connection = None
-        self.is_listening_active = False
-        self.current_text = ""
-        self.TRIGGER_WORD = trigger_word.lower()
-        self.transcription_buffer = []  # Store recent transcriptions
-        self.buffer_size = buffer_size  # Number of recent transcriptions to keep
         logger.info("Initialized AudioTranscriptionHandler")
+        # Store these as instance variables
+        self._is_listening_active = False
+        self._current_text = ""
+        self._transcription_buffer = []
 
     async def initialize_connection(self):
         try:
             self.dg_connection = self.deepgram.listen.asyncwebsocket.v("1")
 
-            async def on_message(self, result, **kwargs):
+            # Create closure to access parent instance variables
+            parent = self
+
+            async def on_message(msg_self, result, **kwargs):
                 if not hasattr(result, "channel"):
                     return
 
-                # Clean up the transcript: remove punctuation and normalize spaces
                 transcript = result.channel.alternatives[0].transcript.lower()
-                cleaned_transcript = " ".join(transcript.replace(",", "").replace(".", "").split())
+                cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
                 is_final = result.is_final
 
                 if not cleaned_transcript:
                     return
 
-                logger.debug(f"Received transcript: '{cleaned_transcript}' (is_final: {is_final})")
-
                 if is_final:
-                    # Add to buffer and check for trigger
-                    self.transcription_buffer.append(cleaned_transcript)
-                    # Keep only the last N transcriptions
-                    if len(self.transcription_buffer) > self.buffer_size:
-                        self.transcription_buffer.pop(0)
+                    parent._transcription_buffer.append(cleaned_transcript)
+                    logger.info(f"cleaned_transcript: {cleaned_transcript}")
+                    logger.info(f"is_listening_active: {parent._is_listening_active}")
+                    if not parent._is_listening_active and "hey steve" in cleaned_transcript:
+                        context = " ".join(parent._transcription_buffer)
+                        logger.info(f"🎯 Trigger word detected. Full context: '{context}'")
+                        print(f"\n🎯 Activated! Full context: '{context}'")
+                        parent._is_listening_active = True
 
-                    # Check for trigger word in the combined recent transcriptions
-                    buffer_text = " ".join(self.transcription_buffer)
-                    print(f"buffer_text: {buffer_text}")
-                    if not self.is_listening_active and self.TRIGGER_WORD in buffer_text:
-                        logger.info(f"🎯 Trigger word detected in buffer: '{buffer_text}'")
-                        print(f"\n🎯 Activated! Heard trigger in: '{buffer_text}'")
-                        self.is_listening_active = True
-                        self.transcription_buffer.clear()  # Clear buffer after triggering
-                    elif self.is_listening_active:
+                    elif parent._is_listening_active:
                         logger.info(f"🎤 Final transcription: '{cleaned_transcript}'")
                         print(f"🎤 {cleaned_transcript}")
-                        self.current_text = cleaned_transcript
+                        parent._current_text = cleaned_transcript
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -93,9 +87,9 @@ class AudioTranscriptionHandler:
 
             await self.dg_connection.send(audio_bytes)
 
-            text = self.current_text
-            self.current_text = ""  # Clear the current text
-            return self.is_listening_active, text
+            text = self._current_text
+            self._current_text = ""  # Clear the current text
+            return self._is_listening_active, text
 
         except Exception as e:
             logger.exception(f"Error processing audio chunk: {e}")
@@ -103,12 +97,16 @@ class AudioTranscriptionHandler:
 
     async def close(self):
         if self.dg_connection:
-            self.dg_connection.finish()
+            try:
+                await self.dg_connection.finish()
+                self.dg_connection = None  # Clear the connection
+            except Exception as e:
+                logger.exception(f"Error closing Deepgram connection: {e}")
 
     def reset_listening_state(self):
-        self.is_listening_active = False
-        self.current_text = ""
-        self.transcription_buffer.clear()  # Clear the buffer when resetting
+        self._is_listening_active = False
+        self._current_text = ""
+        self._transcription_buffer.clear()
 
 
 async def process_audio_to_text(audio_bytes: bytes):

@@ -14,7 +14,7 @@ from utils.logging_config import setup_logging
 from utils.STT_utils import AudioTranscriptionHandler
 
 # Initialize logging with DEBUG level
-setup_logging(log_file=Path("logs/test_local.log"), log_level="DEBUG")
+setup_logging(log_file=Path("logs/test_local.log"), log_level="INFO")
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -45,7 +45,7 @@ class AudioStreamer:
     def get_input_device(self):
         """Helper function to list and select audio input devices"""
         logger.info("\nAvailable audio input devices:")
-        input_device_index = 0
+        input_device_index = 2
 
         for i in range(self.p.get_device_count()):
             device_info = self.p.get_device_info_by_index(i)
@@ -103,7 +103,7 @@ class AudioStreamer:
                     # Check if we're getting audio data
                     audio_data = np.frombuffer(data, dtype=np.float32)
                     # if np.max(np.abs(audio_data)) > 0.0:
-                        # logger.debug("Detected audio signal")
+                    # logger.debug("Detected audio signal")
 
                     # Convert float32 to int16 (what Deepgram expects)
                     audio_data_int16 = (audio_data * 32767).astype(np.int16)
@@ -187,14 +187,33 @@ class AudioStreamer:
         except Exception as e:
             logger.exception(f"Error playing audio response: {e}")
 
+    async def cleanup(self):
+        """Cleanup all resources"""
+        try:
+            # Close the transcription handler first
+            await self.transcription_handler.close()
+
+            # Cleanup PyAudio
+            if hasattr(self, "p") and self.p:
+                self.p.terminate()
+                self.p = None
+
+            logger.info("Cleanup completed successfully")
+        except Exception as e:
+            logger.exception(f"Error during cleanup: {e}")
+
 
 async def main():
+    streamer = None
     try:
         streamer = AudioStreamer()
         await streamer.process_audio()
     except Exception as e:
         logger.exception("Failed to start audio streaming")
         print(f"Error: {e}")
+    finally:
+        if streamer:
+            await streamer.cleanup()
         sys.exit(1)
 
 
