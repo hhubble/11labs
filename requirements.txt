@@ -1,0 +1,6 @@
+uvicorn
+fastapi
+deepgram-sdk
+python-dotenv
+httpx
+litellm
