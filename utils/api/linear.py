@@ -1,0 +1,119 @@
+import json
+import os
+
+import requests
+
+TEAM_ID = "327a3776-ea3d-4af0-a7f4-6a0bc8dd8dbf"
+
+
+def create_linear_issue(title: str, description) -> dict:
+    """
+    Create a new Linear issue using the GraphQL API.
+
+    Args:
+        api_key (str): Linear API key for authentication
+        team_id (str): ID of the team to create the issue in
+        title (str): Title of the issue
+        description (str, optional): Description of the issue in markdown format
+
+    Returns:
+        dict: Response containing the created issue data if successful
+    """
+    url = "https://api.linear.app/graphql"
+
+    # Construct the mutation query
+    mutation = """
+    mutation IssueCreate($input: IssueCreateInput!) {
+        issueCreate(input: $input) {
+            success
+            issue {
+                id
+                title
+                description
+            }
+        }
+    }
+    """
+
+    # Prepare the variables for the mutation
+    variables = {
+        "input": {
+            "teamId": TEAM_ID,
+            "title": title,
+        }
+    }
+
+    # Add description if provided
+    if description:
+        variables["input"]["description"] = description
+
+    # Prepare the request headers
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": os.environ.get("LINEAR_API_KEY"),
+    }
+
+    # Make the request
+    response = requests.post(url, headers=headers, json={"query": mutation, "variables": variables})
+
+    # Return the response data
+    return response.json()  # Return the response data
+
+
+def get_linear_teams() -> dict:
+    """
+    Get all teams from Linear using the GraphQL API.
+
+    Returns:
+        dict: Response containing the teams data if successful
+    """
+    url = "https://api.linear.app/graphql"
+
+    # Construct the query
+    query = """
+    query Teams {
+        teams {
+            nodes {
+                id
+                name
+            }
+        }
+    }
+    """
+
+    # Prepare the request headers
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": os.environ.get("LINEAR_API_KEY"),
+    }
+
+    # Make the request
+    response = requests.post(url, headers=headers, json={"query": query})
+
+    # Return the response data
+    return response.json()
+
+
+if __name__ == "__main__":
+    import dotenv
+
+    dotenv.load_dotenv()
+    # Example usage
+    teams_result = get_linear_teams()
+    if teams_result.get("data", {}).get("teams", {}).get("nodes"):
+        print("Teams retrieved successfully!")
+        for team in teams_result["data"]["teams"]["nodes"]:
+            print(f"Team: {team['name']}, ID: {team['id']}")
+    else:
+        print("Failed to get teams:", teams_result.get("errors"))
+
+    # Original example usage
+    title = "New bug report"
+    description = "Bug found in login flow"
+
+    result = create_linear_issue(title, description)
+    if result.get("data", {}).get("issueCreate", {}).get("success"):
+        print("Issue created successfully!")
+        print(f"Issue ID: {result['data']['issueCreate']['issue']['id']}")
+    else:
+        print("Failed to create issue:", result.get("errors"))
