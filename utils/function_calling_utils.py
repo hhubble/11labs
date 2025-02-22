@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 from enum import Enum
 from typing import Any, Dict
 
 import dotenv
 import litellm
+
+logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
@@ -61,9 +64,13 @@ FUNCTION_SCHEMA = {
 class FunctionCaller:
     def __init__(self):
         self.model = "groq/llama-3.1-8b-instant"
+        logger.info(f"Initialized FunctionCaller with model: {self.model}")
 
     async def determine_action(self, text: str) -> tuple[ActionType, Dict[str, Any]]:
         try:
+            logger.info("Determining action from user input")
+            logger.debug(f"Input text: {text[:100]}...")
+
             messages = [
                 {
                     "role": "system",
@@ -72,7 +79,7 @@ class FunctionCaller:
                 {"role": "user", "content": text},
             ]
 
-            # Step 1: Get the initial response with function calling
+            logger.debug("Making API call to LLM")
             response = litellm.completion(
                 model=self.model,
                 messages=messages,
@@ -80,22 +87,24 @@ class FunctionCaller:
                 tool_choice="auto",
                 api_key=os.getenv("GROQ_API_KEY"),
             )
-            print(response)
-            # Get the function call response
+
+            logger.debug(f"Received response: {response}")
             tool_calls = response.choices[0].message.tool_calls
 
             if tool_calls:
-                # Parse the function call arguments
                 function_args = json.loads(tool_calls[0].function.arguments)
                 action = ActionType(function_args.get("action"))
                 details = function_args.get("details", {})
 
+                logger.info(f"Determined action: {action}")
+                logger.debug(f"Action details: {details}")
                 return action, details
 
+            logger.warning("No action could be determined, returning UNKNOWN")
             return ActionType.UNKNOWN, {}
 
         except Exception as e:
-            print(f"Error in function calling: {e}")
+            logger.exception(f"Error in function calling: {e}")
             return ActionType.UNKNOWN, {}
 
 
@@ -120,7 +129,6 @@ if __name__ == "__main__":
         for input_text in test_inputs:
             import time
 
-            time.sleep(0.5)
             print(f"Input: {input_text}")
             action, details = await caller.determine_action(input_text)
             print(f"Action Type: {action}")
