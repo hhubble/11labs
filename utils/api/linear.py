@@ -1,4 +1,3 @@
-import json
 import os
 
 import requests
@@ -98,14 +97,14 @@ if __name__ == "__main__":
     import dotenv
 
     dotenv.load_dotenv()
-    # Example usage
-    teams_result = get_linear_teams()
-    if teams_result.get("data", {}).get("teams", {}).get("nodes"):
-        print("Teams retrieved successfully!")
-        for team in teams_result["data"]["teams"]["nodes"]:
-            print(f"Team: {team['name']}, ID: {team['id']}")
-    else:
-        print("Failed to get teams:", teams_result.get("errors"))
+    # # Example usage
+    # teams_result = get_linear_teams()
+    # if teams_result.get("data", {}).get("teams", {}).get("nodes"):
+    #     print("Teams retrieved successfully!")
+    #     for team in teams_result["data"]["teams"]["nodes"]:
+    #         print(f"Team: {team['name']}, ID: {team['id']}")
+    # else:
+    #     print("Failed to get teams:", teams_result.get("errors"))
 
     # Original example usage
     title = "New bug report"
