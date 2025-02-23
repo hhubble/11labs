@@ -11,7 +11,7 @@ class AudioTranscriptionHandler:
     def __init__(
         self,
         trigger_phrases={"hey eleven labs", "hey 11 labs", "hey eleven laps", "hey 11 laps"},
-        buffer_size=5,
+        buffer_size=10,
     ):
         self.deepgram = DeepgramClient(os.environ.get("DEEPGRAM_API_KEY"))
         self.dg_connection = None
@@ -99,20 +99,20 @@ class AudioTranscriptionHandler:
             logger.exception(f"Error initializing Deepgram connection: {e}")
             raise
 
-    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str, str]:
+    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str]:
         try:
             if not self.dg_connection:
                 await self.initialize_connection()
 
             # Capture and clear text before processing new chunk
-            text = self._current_text
+            # text = self._current_text
             self._current_text = ""  # Clear before processing new chunk
 
             # Get context and send new audio data
             context = " ".join(self._transcription_buffer) if self._transcription_buffer else ""
             await self.dg_connection.send(audio_bytes)
 
-            return self._is_listening_active, text, context
+            return self._is_listening_active, context
 
         except Exception as e:
             logger.exception(f"Error processing audio chunk: {e}")

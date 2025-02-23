@@ -1,15 +1,15 @@
+import asyncio
 import json
 import logging
 import os
-import asyncio
 from typing import Any, Dict
+
+import dotenv
+import litellm
 
 from utils.action_handling import ActionHandler
 from utils.action_type import ActionType
 from utils.TTS_utils import stream_to_elevenlabs
-
-import dotenv
-import litellm
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +111,15 @@ class Agent:
         self.model = "groq/llama-3.3-70b-versatile"
         self.background_tasks = set()  # Keep track of background tasks
         self.action_handler = ActionHandler()  # Initialize the action handler
-        logger.info(f"Initialized Agent with model: {self.model}")    
-    
+        logger.info(f"Initialized Agent with model: {self.model}")
+
     async def perform_action(self, transcript: str, action: str) -> None:
         try:
             # Convert string action to ActionType enum
             action_type = ActionType[action.upper()]
             print(f"Performing action: {action_type}")
             # Process the action using the action handler
-            await self.action_handler.process_action(
-                action_type=action_type,
-                transcript=transcript
-            )
+            await self.action_handler.process_action(action_type=action_type, transcript=transcript)
         except Exception as e:
             print(f"Error performing action {action}: {e}")
         finally:
@@ -140,25 +137,24 @@ class Agent:
         ]
 
         response = litellm.completion(
-            model=self.model,
-            messages=messages,
-            api_key=os.getenv("GROQ_API_KEY")
+            model=self.model, messages=messages, api_key=os.getenv("GROQ_API_KEY")
         )
-        
+
         response_content = response.choices[0].message.content
+        print(f"LLM Response: {response_content}")
         response_json = json.loads(response_content)
         print(f"LLM Response: {response_json}")
-        
+
         more_info_required = response_json.get("more_info_required")
         response = response_json.get("response")
         action = response_json.get("action")
-        
+
         if action.lower() == ActionType.NO_ACTION.value:
             return None
-        
+
         elif more_info_required == True:
             return response
-        
+
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action))
@@ -175,7 +171,7 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/email_task.txt", "r").read()    
+        transcript = open("testing/email_task.txt", "r").read()
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
         with open("test_output.mp3", "wb") as f:
