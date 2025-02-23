@@ -5,7 +5,9 @@ import requests
 TEAM_ID = "327a3776-ea3d-4af0-a7f4-6a0bc8dd8dbf"
 
 
-def create_linear_issue(title: str, description) -> dict:
+def create_linear_issue(
+    title: str, description: str, priority: int = None, due_date: str = None
+) -> dict:
     """
     Create a new Linear issue using the GraphQL API.
 
@@ -14,6 +16,8 @@ def create_linear_issue(title: str, description) -> dict:
         team_id (str): ID of the team to create the issue in
         title (str): Title of the issue
         description (str, optional): Description of the issue in markdown format
+        priority (int, optional): Priority level (0-4, where 1 is urgent, 2 is high, 3 is normal, 4 is low)
+        due_date (str, optional): Due date in ISO 8601 format (e.g., "2024-03-25")
 
     Returns:
         dict: Response containing the created issue data if successful
@@ -42,9 +46,13 @@ def create_linear_issue(title: str, description) -> dict:
         }
     }
 
-    # Add description if provided
+    # Add optional parameters if provided
     if description:
         variables["input"]["description"] = description
+    if priority is not None:
+        variables["input"]["priority"] = priority
+    if due_date:
+        variables["input"]["dueDate"] = due_date
 
     # Prepare the request headers
     headers = {
@@ -110,7 +118,7 @@ if __name__ == "__main__":
     title = "New bug report"
     description = "Bug found in login flow"
 
-    result = create_linear_issue(title, description)
+    result = create_linear_issue(title, description, priority=1, due_date="2025-03-25")
     if result.get("data", {}).get("issueCreate", {}).get("success"):
         print("Issue created successfully!")
         print(f"Issue ID: {result['data']['issueCreate']['issue']['id']}")

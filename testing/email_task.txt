@@ -1,0 +1,29 @@
+Alex: Thanks for hopping on. We need to align on the onboarding flow updates before the next release. Jordan, where do we stand?
+
+Jordan: We’ve mapped out the new flow. The goal is to make sign-ups smoother by reducing the number of steps. Right now, we ask for too much upfront.
+
+Lisa: Agreed. I think we can defer non-essential details, like profile setup, until after the user gets into the app.
+
+Alex: Makes sense. What about email verification?
+
+Jordan: We should keep that, but maybe delay it until after the user has explored a bit. That way, they’re already engaged before they’re asked to verify.
+
+Lisa: I like that. Also, we should send a follow-up email if they don’t verify within 24 hours.
+
+Alex: Good call. Let’s finalize the messaging for that email. Lisa, can you draft something?
+
+Lisa: Sure. I’ll keep it simple—remind them to verify and highlight key features they’re missing out on.
+
+Jordan: Sounds great. We also need to inform the support team about this change so they’re prepared for any questions.
+
+Alex: Right. Let’s send them a quick email explaining the update.
+
+Lisa: Hey ElevenLabs, please send an email about that.
+
+ElevenLabs: To create the email to the support team, I need to know the email addresses of the support team members and any specific details you'd like to include about the update. Can you please provide this information?
+
+Lisa: Sure, it's support@pally.com
+
+ElevenLabs: I have the recipient's email address as support@pally.com. Can you please provide the subject and body of the email, including any specific details you'd like to include about the update?
+
+Lisa: Tell them about the new onboarding flow, about the new login flows with linkedin or google, and mention the verification.
