@@ -48,12 +48,13 @@ class GoogleAPI:
         self.service_contacts = build('people', 'v1', credentials=self.creds)
         
         print("Authentication successful!")
+        return True
 
-    def create_event(self, summary, location, description, start_time, end_time, attendees=None):
+    def create_event(self, title, location, description, start_time, end_time, attendees=None):
         """Creates a calendar event.
         
         Args:
-            summary (str): Title of the event
+            title (str): Title of the event
             location (str): Location of the event
             description (str): Event description
             start_time (datetime): Start time of the event
@@ -62,7 +63,7 @@ class GoogleAPI:
         """
         try:
             event = {
-                'summary': summary,
+                'summary': title,
                 'location': location,
                 'description': description,
                 'start': {
@@ -461,12 +462,10 @@ def create_test_event():
     )
     
 
-def list_contacts():
+def authenticate():
     google_api = GoogleAPI()
     google_api.authenticate()
-    contacts = google_api.get_contact_metrics('calin@broadn.io', 720)
-    print(contacts)
 
 
 if __name__ == '__main__':
-    list_contacts()
+    authenticate()

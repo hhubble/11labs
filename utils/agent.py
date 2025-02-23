@@ -90,7 +90,7 @@ If more info is required:
 If you have all the information you need:
 {
     "more_info_required": false,
-    "response": string, # let them know what you will do next
+    "response": string, # let them know what you will do next with as little detail as possible
     "action": "ACTION"
 }
 """
@@ -113,7 +113,7 @@ class Agent:
         self.action_handler = ActionHandler()  # Initialize the action handler
         logger.info(f"Initialized Agent with model: {self.model}")    
     
-    async def perform_action(self, action: str, response_json: Dict[str, Any]) -> None:
+    async def perform_action(self, transcript: str, action: str) -> None:
         try:
             # Convert string action to ActionType enum
             action_type = ActionType[action.upper()]
@@ -121,8 +121,7 @@ class Agent:
             # Process the action using the action handler
             await self.action_handler.process_action(
                 action_type=action_type,
-                text=response_json.get("response", ""),
-                details=response_json
+                transcript=transcript
             )
         except Exception as e:
             print(f"Error performing action {action}: {e}")
@@ -130,14 +129,14 @@ class Agent:
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
-    async def call_llm(self, text: str) -> str:
+    async def call_llm(self, transcript: str) -> str:
         print("Calling LLM...")
         messages = [
             {
                 "role": "system",
                 "content": agent_system_prompt,
             },
-            {"role": "user", "content": text},
+            {"role": "user", "content": transcript},
         ]
 
         response = litellm.completion(
@@ -162,7 +161,7 @@ class Agent:
         
         else:
             # Create a task and add it to our set
-            task = asyncio.create_task(self.perform_action(action, response_json))
+            task = asyncio.create_task(self.perform_action(transcript, action))
             self.background_tasks.add(task)
             return response
 
@@ -176,8 +175,8 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        linear_task_transcript = open("testing/linear_task.txt", "r").read()    
-        response = await agent.call_llm(linear_task_transcript)
+        transcript = open("testing/email_task.txt", "r").read()    
+        response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
         with open("test_output.mp3", "wb") as f:
             f.write(audio_data)
