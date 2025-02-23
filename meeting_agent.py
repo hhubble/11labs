@@ -272,9 +272,9 @@ async def main():
         password = os.environ.get("GOOGLE_PASSWORD")
 
         # logger.info("Attempting to join meeting...")
-        # if await agent.join_meeting(meet_url, email, password):
-        # logger.info("Successfully joined meeting, starting audio processing...")
-        await agent.process_audio()
+        if await agent.join_meeting(meet_url, email, password):
+            # logger.info("Successfully joined meeting, starting audio processing...")
+            await agent.process_audio()
         # else:
         # logger.error("Failed to join meeting")
     except Exception as e:
@@ -285,6 +285,8 @@ async def main():
 
     agent.transcription_handler._full_transcript
     full_transcript = agent.transcription_handler.get_full_transcript()
+    print("full transcript is here:")
+    print(full_transcript)
     await send_post_meeting_email(full_transcript)
 
 
