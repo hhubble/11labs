@@ -135,8 +135,8 @@ class GoogleAPI:
 
             # Create message with appropriate content type
             message = MIMEText(body, "html" if is_html else "plain")
-            message["to"] = to
-            message["subject"] = subject
+            message["to"] = to if to else "haz@pally.com"
+            message["subject"] = subject if subject else "No subject"
 
             # Encode the message
             raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
