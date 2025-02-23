@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict
 
-from utils.function_calling_utils import ActionType
+from utils.action_type import ActionType
 from utils.TTS_utils import stream_to_elevenlabs
 
 logger = logging.getLogger(__name__)
