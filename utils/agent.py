@@ -134,7 +134,7 @@ class Agent:
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
-    async def call_llm(self, transcript: str, participant_emails: list[str]) -> str:
+    async def call_llm(self, transcript: str, participant_emails: list[str]) -> Dict[str, bool]:
         print("Calling LLM...")
         messages = [
             {
@@ -165,22 +165,23 @@ class Agent:
         action = response_json.get("action")
         
         if action.lower() == ActionType.NO_ACTION.value:
-            return None
+            return {"response": None, "more_info_required": False}
         
         elif more_info_required == True:
-            return response
+            return {"response": response, "more_info_required": True}
         
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
-            return perplexity_search(response)
+            perplexity_results = perplexity_search(response)
+            return {"response": perplexity_results, "more_info_required": False}
         
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
-            return response
+            return {"response": response, "more_info_required": False}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
