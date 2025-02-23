@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, Response, WebSocket
 from fastapi.responses import StreamingResponse
 
 from utils.action_handling import ActionHandler
-from utils.function_calling_utils import ActionType, FunctionCaller
+from utils.agent import ActionType, FunctionCaller
 from utils.logging_config import setup_logging
 from utils.STT_utils import AudioTranscriptionHandler
 from utils.TTS_utils import stream_to_elevenlabs  # You'll need to implement this

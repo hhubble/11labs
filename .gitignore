@@ -1,7 +1,11 @@
 venv/
 .venv/
 .env
-
+credentials.json
+token.pickle
+*credentials*.json
+secrets/
+*secret*
 
 # Logs
 logs/

@@ -1,3 +1,11 @@
+elevenlabs
+selenium
+pyaudio
+requests
+sounddevice
+numpy
+asyncio
+soundfile
 uvicorn
 fastapi
 deepgram-sdk

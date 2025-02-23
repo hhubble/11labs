@@ -13,7 +13,7 @@ import soundfile as sf
 from pydub import AudioSegment
 
 from utils.action_handling import ActionHandler
-from utils.function_calling_utils import FunctionCaller
+from utils.agent import FunctionCaller
 from utils.logging_config import setup_logging
 from utils.STT_utils import AudioTranscriptionHandler
 
