@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from google_actions import GoogleAPI
+from utils.api.google import GoogleAPI
 
 link = "pizza-demo-delight.lovable.app"
 
