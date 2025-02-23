@@ -31,6 +31,9 @@ Decide if you have all the information you need to perform the action. If you do
 
 If the user asks you to search the web, or if you need to search the web to answer the user's question, simply proceed with the web search. Don't ask for confirmation or for additional information. Use the response field to write the search query.
 
+Be proactive in inferring information from context. Only ask for more information if it's absolutely necessary and cannot be reasonably inferred from the conversation. For example:
+
+
 ## RESPONSE
 You must respond with a JSON object in the below format. Do not include any other text before or after the JSON object.
 {
@@ -119,7 +122,6 @@ class Agent:
         self.is_active = False
         self.more_info_required = False
 
-
     async def perform_action(
         self, transcript: str, action: str, participant_emails: list[str]
     ) -> None:
@@ -179,12 +181,20 @@ class Agent:
         if action.lower() == ActionType.NO_ACTION.value:
             self.is_active = False
             self.more_info_required = False
-            return {"response": None, "taking_action": self.is_active, "more_info_required": self.more_info_required}
+            return {
+                "response": None,
+                "taking_action": self.is_active,
+                "more_info_required": self.more_info_required,
+            }
 
         elif more_info_required == True:
             self.is_active = False
             self.more_info_required = True
-            return {"response": response, "taking_action": self.is_active, "more_info_required": self.more_info_required}
+            return {
+                "response": response,
+                "taking_action": self.is_active,
+                "more_info_required": self.more_info_required,
+            }
 
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
@@ -193,7 +203,11 @@ class Agent:
             perplexity_results = perplexity_search(response)
             self.is_active = False
             self.more_info_required = False
-            return {"response": perplexity_results, "taking_action": self.is_active, "more_info_required": self.more_info_required}
+            return {
+                "response": perplexity_results,
+                "taking_action": self.is_active,
+                "more_info_required": self.more_info_required,
+            }
 
         else:
             # Create a task and add it to our set
@@ -201,7 +215,11 @@ class Agent:
             self.background_tasks.add(task)
             self.is_active = True
             self.more_info_required = False
-            return {"response": response, "taking_action": self.is_active, "more_info_required": self.more_info_required}
+            return {
+                "response": response,
+                "taking_action": self.is_active,
+                "more_info_required": self.more_info_required,
+            }
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
@@ -222,6 +240,21 @@ async def test_agent():
         await agent.cleanup()
 
 
+async def test_agent_text():
+    agent = Agent()
+    try:
+        participant_emails = ["test@example.com"]
+        while True:
+            user_input = input("Enter transcript (or 'quit' to exit): ")
+            if user_input.lower() == "quit":
+                break
+            response = await agent.call_llm(user_input, participant_emails)
+            print("Agent response:", response)
+    finally:
+        await agent.cleanup()
+
+
 if __name__ == "__main__":
     # Run the tests
-    asyncio.run(test_agent())
+    # asyncio.run(test_agent())  # Comment out or remove the original test
+    asyncio.run(test_agent_text())
