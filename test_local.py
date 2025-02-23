@@ -9,7 +9,7 @@ import numpy as np
 import pyaudio
 
 from utils.action_handling import ActionHandler
-from utils.function_calling_utils import FunctionCaller
+from utils.agent import FunctionCaller
 from utils.logging_config import setup_logging
 from utils.STT_utils import AudioTranscriptionHandler
 
