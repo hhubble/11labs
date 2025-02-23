@@ -12,3 +12,9 @@ deepgram-sdk
 python-dotenv
 httpx
 litellm
+deepgram-sdk
+pydub
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+notion_client

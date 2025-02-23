@@ -50,7 +50,7 @@ async def handle_email_creation(transcript: str) -> bool:
         logger.info("Processing email creation request")
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
-        print("Calling LLM...")
+        logger.info("Calling LLM...")
         messages = [
             {
                 "role": "system",
@@ -83,6 +83,7 @@ async def handle_email_creation(transcript: str) -> bool:
             return False
         
         google_api.send_email(to, subject, body)
+        logger.info("Email sent successfully")
         
         return True
     except Exception as e:
@@ -94,7 +95,7 @@ async def handle_calendar_event(transcript: str, participant_emails: list[str]) 
         logger.info("Processing calendar event creation request")
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
-        print("Calling LLM...")
+        logger.info("Calling LLM...")
         messages = [
             {
                 "role": "system",
@@ -138,6 +139,7 @@ async def handle_calendar_event(transcript: str, participant_emails: list[str]) 
             return False
         
         google_api.create_event(title, location, description, start_time, end_time, attendee_emails)
+        logger.info("Calendar event created successfully")
         
         return True
     except Exception as e:

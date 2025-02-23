@@ -1,7 +1,7 @@
 import asyncio
 
 import litellm
-from api.google import GoogleAPI
+from utils.api.google import GoogleAPI
 
 
 async def generate_summary(transcript: str) -> str:

@@ -117,6 +117,7 @@ class Agent:
         self.action_handler = ActionHandler()  # Initialize the action handler
         logger.info(f"Initialized Agent with model: {self.model}")
         self.is_active = False
+        self.more_info_required = False
 
 
     async def perform_action(
@@ -140,10 +141,11 @@ class Agent:
             self.background_tasks.remove(asyncio.current_task())
 
     async def call_llm(self, transcript: str, participant_emails: list[str]) -> Dict[str, bool]:
-        if self.is_active:
+        if self.is_active and not self.more_info_required:
             return {"response": None, "taking_action": True}
 
         self.is_active = True
+        self.more_info_required = False
         print("Calling LLM...")
         messages = [
             {
@@ -176,11 +178,12 @@ class Agent:
 
         if action.lower() == ActionType.NO_ACTION.value:
             self.is_active = False
-            return {"response": None, "taking_action": False}
+            return {"response": None, "taking_action": self.is_active}
 
         elif more_info_required == True:
             self.is_active = False
-            return {"response": response, "taking_action": False}
+            self.more_info_required = True
+            return {"response": response, "taking_action": self.is_active, "more_info_required": self.more_info_required}
 
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
@@ -188,14 +191,14 @@ class Agent:
             await handle_audio_output(audio_data, output_mode="speak")
             perplexity_results = perplexity_search(response)
             self.is_active = False
-            return {"response": perplexity_results, "taking_action": False}
+            return {"response": perplexity_results, "taking_action": self.is_active}
 
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
             self.is_active = True
-            return {"response": response, "taking_action": True}
+            return {"response": response, "taking_action": self.is_active}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
