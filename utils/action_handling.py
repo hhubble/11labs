@@ -2,6 +2,7 @@ import logging
 from utils.action_type import ActionType
 
 from utils.tasks.google_tasks import handle_email_creation, handle_calendar_event
+from utils.tasks.linear_tasks import handle_new_linear_task
 
 ## PLACEHOLDERS
 async def handle_web_search(transcript: str) -> bool:
@@ -9,10 +10,6 @@ async def handle_web_search(transcript: str) -> bool:
 
 async def handle_note_creation(transcript: str) -> bool:
     return True
-
-async def handle_linear_task(transcript: str) -> bool:
-    return True
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +34,7 @@ class ActionHandler:
                 return {"success": result}
 
             elif action_type == ActionType.LINEAR_TASK:
-                result = await handle_linear_task(transcript)
+                result = await handle_new_linear_task(transcript)
                 return {"success": result}
             
             else:

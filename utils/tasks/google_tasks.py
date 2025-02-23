@@ -43,6 +43,7 @@ You must respond JSON format only with no additional text before or after. Use t
 async def handle_email_creation(transcript: str) -> bool:
     try:
         logger.info("Processing email creation request")
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
         print("Calling LLM...")
         messages = [
@@ -50,7 +51,7 @@ async def handle_email_creation(transcript: str) -> bool:
                 "role": "system",
                 "content": email_system_prompt,
             },
-            {"role": "user", "content": transcript},
+            {"role": "user", "content": f"The current UTC time is: {current_time}\n\n{transcript}"},
         ]
 
         response = litellm.completion(

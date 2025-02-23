@@ -175,7 +175,7 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/email_task.txt", "r").read()    
+        transcript = open("testing/linear_task.txt", "r").read()    
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
         with open("test_output.mp3", "wb") as f:
