@@ -29,7 +29,7 @@ Decide if you have all the information you need to perform the action. If you do
 If the user asks you to search the web, or if you need to search the web to answer the user's question, simply proceed with the web search. Don't ask for confirmation or for additional information. Use the response field to write the search query.
 
 ## RESPONSE
-You must respond with a JSON object in the following format:
+You must respond with a JSON object in the below format. Do not include any other text before or after the JSON object.
 {
     "more_info_required": bool,
     "response": string,
@@ -93,7 +93,7 @@ If more info is required:
 If you have all the information you need:
 {
     "more_info_required": false,
-    "response": string, # let them know what you will do next with as little detail as possible
+    "response": string, # let them know what you will do next with as little detail as possible, ie. I created the task, I sent the email, I added the event to the calendar, etc...
     "action": "ACTION"
 }
 
@@ -103,16 +103,6 @@ If you need to search the web:
     "response": string, # the search query
     "action": "WEB_SEARCH"
 }
-"""
-
-function_calling_system_prompt = """
-You are an executive assistant to busy executives. Your job is to interpret the needs of the team within a meeting, ask for more information if needed, and then perform the necessary actions.
-
-Your name is "ElevenLabs" -- you will know the user is speaking to you if they say "Hey ElevenLabs" or something similar, followed by a query. 
-
-You will be provided with the full meeting transcript for context. The user may have asked multiple questions thoughtout the meeting, so ensure you're responding to the most recent query (at the end of the transcript).
-
-You have already gathered all the information you need to perform the action. You must perform the action now.
 """
 
 
@@ -156,7 +146,13 @@ class Agent:
         )
         
         response_content = response.choices[0].message.content
-        response_json = json.loads(response_content)
+        
+        try:
+            response_json = json.loads(response_content)
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON: {response_content}")
+            raise
+        
         print(f"LLM Response: {response_json}")
         
         more_info_required = response_json.get("more_info_required")
@@ -191,7 +187,7 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/web_search.txt", "r").read()    
+        transcript = open("testing/take_note.txt", "r").read()    
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")
