@@ -188,51 +188,6 @@ class MeetingAgent:
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
-    async def play_audio_to_speaker(self, audio_data, p=None):
-        """Play audio data through the system's speakers using PyAudio.
-
-        Args:
-            audio_data (bytes): MP3 audio data from ElevenLabs stream
-            p (PyAudio, optional): PyAudio instance. If None, creates a new one.
-        """
-        try:
-            # Convert MP3 to raw PCM audio
-            audio_segment = AudioSegment.from_mp3(io.BytesIO(audio_data))
-            raw_audio_data = audio_segment.raw_data
-
-            # Create PyAudio instance if not provided
-            if p is None:
-                p = pyaudio.PyAudio()
-                should_terminate = True
-            else:
-                should_terminate = False
-
-            # Open output stream
-            stream = p.open(
-                format=pyaudio.paInt16,
-                channels=audio_segment.channels,  # Use actual number of channels
-                rate=audio_segment.frame_rate,  # Use actual frame rate
-                output=True,
-                frames_per_buffer=4096,
-            )
-
-            # Play the audio in chunks
-            chunk_size = 4096
-            for i in range(0, len(raw_audio_data), chunk_size):
-                chunk = raw_audio_data[i : i + chunk_size]
-                stream.write(chunk)
-                await asyncio.sleep(0.01)  # Give other tasks a chance to run
-
-            # Cleanup
-            stream.stop_stream()
-            stream.close()
-            if should_terminate:
-                p.terminate()
-
-        except Exception as e:
-            logger.error(f"Error playing audio: {e}")
-            raise
-
 
 async def main():
     agent = MeetingAgent()
@@ -247,10 +202,27 @@ async def main():
     except Exception as e:
         logger.exception("Error in main process")
     finally:
+        from utils.post_meeting_items import send_post_meeting_email
+
+        transcript = agent.transcription_handler.get_full_transcript()
+
+        await send_post_meeting_email(transcript)
+
         await agent.cleanup()
+
+
+import litellm
+
+# async def generate_email_summary(transcript, action_items):
+#     litellm.completion(
+#         model="groq/llama-3.3-70b-versatile",
+#         messages=[{"role": "user", "content": f"Summary: {summary}\nAction Items: {action_items}"}],
+#     )
 
 
 if __name__ == "__main__":
     print("\nStarting Meeting Agent...")
+    print("Press Ctrl+C to stop\n")
+    asyncio.run(main())
     print("Press Ctrl+C to stop\n")
     asyncio.run(main())

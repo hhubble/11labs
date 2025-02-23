@@ -1,4 +1,7 @@
+import asyncio
+
 import litellm
+from api.google import GoogleAPI
 
 
 async def generate_summary(transcript: str) -> str:
@@ -59,3 +62,30 @@ Action Items:"""
     )
 
     return response.choices[0].message.content
+
+
+async def send_post_meeting_email(full_transcript):
+    from utils.post_meeting_items import generate_action_items, generate_summary
+
+    summary, action_items = await asyncio.gather(
+        generate_summary(full_transcript), generate_action_items(full_transcript)
+    )
+
+    print(f"Summary: {summary}")
+    print(f"Action Items: {action_items}")
+
+    google_api = GoogleAPI()
+    google_api.authenticate()
+    google_api.send_email(
+        to="haz@pally.com",
+        subject="Meeting Action Items",
+        body=f"Summary: {summary}\nAction Items: {action_items}",
+    )
+
+
+if __name__ == "__main__":
+    asyncio.run(
+        send_post_meeting_email(
+            "This is a full transcript. Over the day we need to send emails and go to the studio to finish all of our pottery work"
+        )
+    )
