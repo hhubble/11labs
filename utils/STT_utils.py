@@ -22,6 +22,7 @@ class AudioTranscriptionHandler:
         self._current_text = ""
         self._transcription_buffer = []
         self._full_transcript = []
+        self.context_grew = False
 
     async def initialize_connection(self):
         try:
@@ -36,9 +37,6 @@ class AudioTranscriptionHandler:
                 # cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
                 is_final = result.is_final
 
-                # if not cleaned_transcript:
-                #     return
-
                 if is_final:
                     # Keep only the last buffer_size transcripts
                     # parent._transcription_buffer.append(cleaned_transcript)
@@ -50,8 +48,12 @@ class AudioTranscriptionHandler:
 
                     # Get the last few chunks combined
                     # context = " ".join(parent._transcription_buffer)
-
+                    self.context_grew = True
                     parent._full_transcript.append(transcript)
+                    logger.info(f"context_grew: {self.context_grew}")
+                else:
+                    logger.info(f"context_grew: {self.context_grew}")
+                    self.context_grew = False
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -74,6 +76,7 @@ class AudioTranscriptionHandler:
                 language="en",
                 smart_format=True,
                 interim_results=True,
+                endpointing=500,
             )
 
             if not await self.dg_connection.start(options):

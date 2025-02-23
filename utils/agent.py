@@ -118,6 +118,7 @@ class Agent:
         logger.info(f"Initialized Agent with model: {self.model}")
         self.is_active = False
 
+
     async def perform_action(
         self, transcript: str, action: str, participant_emails: list[str]
     ) -> None:

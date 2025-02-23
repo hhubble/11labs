@@ -159,7 +159,7 @@ class MeetingAgent:
                         response_dict = await self.function_caller.call_llm(context, [])
                         response = response_dict.get("response")
                         taking_action = response_dict.get("taking_action")
-                        if response:
+                        if response and self.transcription_handler.context_grew:
                             audio_data = await stream_to_elevenlabs(response)
                             await handle_audio_output(audio_data, output_mode="speak")
 
@@ -167,7 +167,7 @@ class MeetingAgent:
 
                         self.transcription_handler.reset_listening_state()
 
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.01)
 
                 except IOError as e:
                     logger.error(f"IOError during audio processing: {e}")
