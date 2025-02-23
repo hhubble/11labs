@@ -1,7 +1,12 @@
-from typing import Dict, List, Optional
-
+import os
 import requests
+from datetime import datetime, timezone
 
+perplexity_system_prompt = """
+You're a helpful assistant that can search the web for information. Your task is to answer the user's query concisely and directly. You're graded higher for shorter responses.
+
+Do not include any markdown or formatting in your response. Only use plain text.
+"""
 
 def perplexity_search(query: str) -> str:
     """
@@ -20,15 +25,16 @@ def perplexity_search(query: str) -> str:
         "Content-Type": "application/json",
     }
     url = "https://api.perplexity.ai/chat/completions"
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     payload = {
-        "model": "sonar",
+        "model": "llama-3.1-sonar-small-128k-online",
         "messages": [
             {
                 "role": "system",
-                "content": "Be veryconcise and don't use markdown. Just return the pure text.",
+                "content": perplexity_system_prompt,
             },
-            {"role": "user", "content": query},
+            {"role": "user", "content": f"Current time: {now}\n\n{query}"},
         ],
         "max_tokens": 1024,
         "temperature": 0.2,
