@@ -9,8 +9,8 @@ import litellm
 
 from utils.action_handling import ActionHandler
 from utils.action_type import ActionType
-from utils.TTS_utils import stream_to_elevenlabs, handle_audio_output
 from utils.api.perplexity import perplexity_search
+from utils.TTS_utils import handle_audio_output, stream_to_elevenlabs
 
 logger = logging.getLogger(__name__)
 
@@ -164,13 +164,13 @@ class Agent:
 
         elif more_info_required == True:
             return response
-        
+
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
             return perplexity_search(response)
-        
+
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action))
@@ -187,7 +187,7 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/web_search.txt", "r").read()    
+        transcript = open("testing/web_search.txt", "r").read()
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")

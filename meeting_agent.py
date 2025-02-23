@@ -18,7 +18,7 @@ from utils.action_handling import ActionHandler
 from utils.agent import Agent
 from utils.logging_config import setup_logging
 from utils.STT_utils import AudioTranscriptionHandler
-from utils.TTS_utils import stream_to_elevenlabs
+from utils.TTS_utils import handle_audio_output, handle_audio_to_microphone, stream_to_elevenlabs
 
 # Initialize logging
 setup_logging(log_file=Path("logs/meeting_agent.log"), log_level="INFO")
@@ -159,7 +159,7 @@ class MeetingAgent:
 
                         response = await self.function_caller.call_llm(context)
                         audio_data = await stream_to_elevenlabs(response)
-                        await self.play_audio_to_speaker(audio_data)
+                        await handle_audio_output(audio_data, output_mode="speak")
                         print(f"\n💬 Response: {response}")
 
                         self.transcription_handler.reset_listening_state()
@@ -238,7 +238,7 @@ async def main():
     agent = MeetingAgent()
     try:
         # Replace with your actual meeting details
-        meet_url = "https://meet.google.com/tmh-mzuc-fid?pli=1"
+        meet_url = "https://meet.google.com/fbb-gsfv-osg?authuser=0"
         email = "elevenlabsagent@gmail.com"
         password = os.environ.get("GOOGLE_PASSWORD")
 
