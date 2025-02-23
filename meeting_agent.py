@@ -141,9 +141,6 @@ class MeetingAgent:
         input_device_index = self.get_input_device()
         logger.info(f"Selected input device index: {input_device_index}")
 
-        # Add this variable at the start of the method
-        previously_sent_context = ""
-
         try:
             logger.info("Opening audio stream...")
             stream = self.p.open(
@@ -156,45 +153,78 @@ class MeetingAgent:
             )
             logger.info("Audio stream opened successfully")
             print("\nListening... (Press Ctrl+C to stop)")
-
+            
+            conversation_history = []  # Full conversation history for LLM context
+            last_transcript = ""
+            processing = False
+            
             while True:
                 try:
-                    logger.debug("Reading audio chunk...")
+                    # Don't process new audio while handling a response
+                    if processing:
+                        await asyncio.sleep(0.01)
+                        continue
+
+                    # Ensure Deepgram connection is active
+                    if not self.transcription_handler.dg_connection:
+                        await self.transcription_handler.initialize_connection()
+
                     data = stream.read(self.CHUNK, exception_on_overflow=False)
                     audio_data = np.frombuffer(data, dtype=np.float32)
                     audio_data_int16 = (audio_data * 32767).astype(np.int16)
                     audio_bytes = audio_data_int16.tobytes()
 
-                    logger.debug("Processing audio chunk through transcription handler...")
-                    is_active, context = await self.transcription_handler.process_audio_chunk(
-                        audio_bytes
-                    )
-                    logger.debug(f"Transcription result: {context}")
+                    try:
+                        transcript = await self.transcription_handler.process_audio_chunk(audio_bytes)
+                    except Exception as e:
+                        if "ConnectionClosed" in str(e):
+                            logger.info("Deepgram connection closed, reinitializing...")
+                            await self.transcription_handler.initialize_connection()
+                            continue
+                        else:
+                            raise
                     
-                    # Only process if we have context and it's different from the previous one
-                    if context and context.strip() != previously_sent_context.strip():
-                        logger.info(f"New transcription detected: {context}")
-                        previously_sent_context = context
+                    if not transcript or transcript == last_transcript:
+                        await asyncio.sleep(0.01)
+                        continue
 
-                        logger.info("Calling LLM for response...")
-                        response_dict = await self.function_caller.call_llm(context, ["haz@pally.com", "wylansford@gmail.com"])
-                        response = response_dict.get("response")
-                        taking_action = response_dict.get("taking_action")
-                        more_info_required = response_dict.get("more_info_required")
+                    # Only process if it's a new user message
+                    if transcript and not transcript.startswith("ElevenLabs:"):
+                        processing = True
+                        last_transcript = transcript
+                        logger.info(f"Submitting transcript: {transcript}")
                         
-                        logger.info(f"LLM Response: {response}")
-                        logger.debug(f"Taking action: {taking_action}, More info required: {more_info_required}")
-
+                        # Add user message to conversation history
+                        conversation_history.append(f"User: {transcript}")
+                        
+                        # Send full conversation context to LLM
+                        full_context = " ".join(conversation_history)
+                        
+                        response_dict = await self.function_caller.call_llm(full_context, ["haz@pally.com", "wylansford@gmail.com"])
+                        
+                        response = response_dict.get("response")
                         if response:
+                            print(f"\n💬 Response: {response}")
                             logger.info("Generating audio response...")
                             audio_data = await stream_to_elevenlabs(response)
                             logger.info("Playing audio response...")
+                            
+                            # Play the response
                             await handle_audio_output(audio_data, output_mode="speak")
-
-                        print(f"\n💬 Response: {response}")
-
-                        logger.debug("Resetting listening state...")
-                        self.transcription_handler.reset_listening_state()
+                            
+                            # Add agent response to conversation history
+                            conversation_history.append(f"ElevenLabs: {response}")
+                            
+                            # Reinitialize Deepgram connection after response
+                            try:
+                                await self.transcription_handler.close()
+                                await self.transcription_handler.initialize_connection()
+                            except Exception as e:
+                                logger.error(f"Error reinitializing Deepgram: {e}")
+                        
+                        # Wait a bit before processing new input to avoid feedback
+                        await asyncio.sleep(1)
+                        processing = False
 
                     await asyncio.sleep(0.01)
 
@@ -234,12 +264,12 @@ async def main():
         email = "elevenlabsagent@gmail.com"
         password = os.environ.get("GOOGLE_PASSWORD")
         
-        logger.info("Attempting to join meeting...")
-        if await agent.join_meeting(meet_url, email, password):
-            logger.info("Successfully joined meeting, starting audio processing...")
-            await agent.process_audio()
-        else:
-            logger.error("Failed to join meeting")
+        # logger.info("Attempting to join meeting...")
+        # if await agent.join_meeting(meet_url, email, password):
+            # logger.info("Successfully joined meeting, starting audio processing...")
+        await agent.process_audio()
+        # else:
+            # logger.error("Failed to join meeting")
     except Exception as e:
         logger.exception("Critical error in main process")
     finally:

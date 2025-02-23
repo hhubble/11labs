@@ -24,6 +24,8 @@ class AudioTranscriptionHandler:
         self._current_text = ""
         self._transcription_buffer = []
         self._full_transcript = []
+        self._is_speaking = False
+        self._current_utterance = []
 
     async def initialize_connection(self):
         try:
@@ -36,11 +38,22 @@ class AudioTranscriptionHandler:
 
                 transcript = result.channel.alternatives[0].transcript
                 is_final = result.is_final
+                speech_final = result.speech_final
 
-                if is_final:
-                    print(f"is final: {is_final}")
-                    parent._full_transcript.append(transcript)
-                    logger.info(f"New final transcript added: {transcript}")
+                if transcript:
+                    if not parent._is_speaking:
+                        parent._is_speaking = True
+                        parent._current_utterance = []
+                    
+                    if is_final:
+                        parent._current_utterance.append(transcript)
+
+                if speech_final and parent._is_speaking:
+                    complete_utterance = " ".join(parent._current_utterance)
+                    parent._full_transcript.append(complete_utterance)
+                    parent._current_utterance = []
+                    parent._is_speaking = False
+                    logger.info(f"New complete utterance: {complete_utterance}")
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -64,6 +77,7 @@ class AudioTranscriptionHandler:
                 smart_format=True,
                 interim_results=True,
                 endpointing=500,
+                diarize=True
             )
 
             if not await self.dg_connection.start(options):
@@ -73,7 +87,7 @@ class AudioTranscriptionHandler:
             logger.exception(f"Error initializing Deepgram connection: {e}")
             raise
 
-    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str]:
+    async def process_audio_chunk(self, audio_bytes: bytes) -> str:
         try:
             if not self.dg_connection:
                 await self.initialize_connection()
@@ -81,13 +95,17 @@ class AudioTranscriptionHandler:
             # Send new audio data
             await self.dg_connection.send(audio_bytes)
             
-            # Return the current full transcript
-            context = " ".join(self._full_transcript) if self._full_transcript else ""
-            return self._is_listening_active, context
+            # If agent is speaking, only return transcript without triggering new commands
+            if self._is_speaking:
+                return self._full_transcript[-1] if self._full_transcript else ""
+            
+            # Return only the latest transcript chunk
+            transcript = self._full_transcript[-1] if self._full_transcript else ""
+            return transcript
 
         except Exception as e:
             logger.exception(f"Error processing audio chunk: {e}")
-            return False, ""
+            return ""
 
     async def close(self):
         if self.dg_connection:
@@ -124,7 +142,7 @@ async def process_audio_to_text(audio_bytes: bytes):
 
         dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
 
-        options = LiveOptions(encoding="linear16", sample_rate=16000, channels=1, model="nova-2")
+        options = LiveOptions(encoding="linear16", sample_rate=16000, channels=1, model="nova-2", idle_timeout=60000)
 
         if not dg_connection.start(options):
             raise Exception("Failed to start Deepgram connection")
@@ -158,7 +176,7 @@ if __name__ == "__main__":
 
             dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
 
-            options = LiveOptions(smart_format=True, model="nova-2", language="en-US")
+            options = LiveOptions(smart_format=True, model="nova-2", language="en-US", idle_timeout=60000)
             dg_connection.start(options)
 
             lock_exit = threading.Lock()

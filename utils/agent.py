@@ -178,7 +178,8 @@ class Agent:
 
         if action.lower() == ActionType.NO_ACTION.value:
             self.is_active = False
-            return {"response": None, "taking_action": self.is_active}
+            self.more_info_required = False
+            return {"response": None, "taking_action": self.is_active, "more_info_required": self.more_info_required}
 
         elif more_info_required == True:
             self.is_active = False
@@ -191,14 +192,16 @@ class Agent:
             await handle_audio_output(audio_data, output_mode="speak")
             perplexity_results = perplexity_search(response)
             self.is_active = False
-            return {"response": perplexity_results, "taking_action": self.is_active}
+            self.more_info_required = False
+            return {"response": perplexity_results, "taking_action": self.is_active, "more_info_required": self.more_info_required}
 
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
             self.is_active = True
-            return {"response": response, "taking_action": self.is_active}
+            self.more_info_required = False
+            return {"response": response, "taking_action": self.is_active, "more_info_required": self.more_info_required}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
@@ -221,8 +224,4 @@ async def test_agent():
 
 if __name__ == "__main__":
     # Run the tests
-    asyncio.run(test_agent())
-    asyncio.run(test_agent())
-    asyncio.run(test_agent())
-    asyncio.run(test_agent())
     asyncio.run(test_agent())
