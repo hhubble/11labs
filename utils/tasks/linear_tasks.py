@@ -17,20 +17,25 @@ You must respond JSON format only with no additional text before or after. Use t
 {
     "title": string,
     "description": string,
-    "priority": string,
-    "due_date": string
+    "priority": int,
+    "due_date": string  in ISO 8601 format (e.g., "2024-03-25")
 }
 
 Priority options:
-- Low
-- Medium
-- High
-- Urgent
+- 0: None
+- 1: Urgent
+- 2: High
+- 3: Medium
+- 4: Low
+
+Date format:
+- ISO 8601 format (e.g., "2024-03-25")
 """
 
 async def handle_new_linear_task(transcript: str) -> bool:
     try:
         logger.info("Processing new linear task creation request")
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
         print("Calling LLM...")
         messages = [
@@ -38,7 +43,7 @@ async def handle_new_linear_task(transcript: str) -> bool:
                 "role": "system",
                 "content": new_task_system_prompt,
             },
-            {"role": "user", "content": transcript},
+            {"role": "user", "content": f"The current UTC time is: {current_time}\n\n{transcript}"},
         ]
 
         response = litellm.completion(

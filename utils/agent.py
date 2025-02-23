@@ -9,7 +9,8 @@ import litellm
 
 from utils.action_handling import ActionHandler
 from utils.action_type import ActionType
-from utils.TTS_utils import stream_to_elevenlabs
+from utils.TTS_utils import stream_to_elevenlabs, handle_audio_output
+from utils.api.perplexity import perplexity_search
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ Your name is "ElevenLabs" -- you will know the user is speaking to you if they s
 You will be provided with the full meeting transcript for context. The user may have asked multiple questions thoughtout the meeting, so ensure you're responding to the most recent query (at the end of the transcript).
 
 Decide if you have all the information you need to perform the action. If you do, perform the action. If you don't, ask for more information. You can make assumptions for the relevant information based on the meeting transcript. Only ask for more information if you don't have enough information to make an assumption.
+
+If the user asks you to search the web, or if you need to search the web to answer the user's question, simply proceed with the web search. Don't ask for confirmation or for additional information. Use the response field to write the search query.
 
 ## RESPONSE
 You must respond with a JSON object in the following format:
@@ -46,7 +49,7 @@ You can perform the following actions:
 ## REQUIRED INFORMATION
 
 ### WEB_SEARCH
-- query: The query to search the web for (you can assume this based on the context)
+- query: The query to search the web for (you can assume this based on the context) -- you do not need more information from the user if this is the relevant action
 
 ### EMAIL_CREATION
 - subject: The subject of the email (you can assume this based on the context)
@@ -92,6 +95,13 @@ If you have all the information you need:
     "more_info_required": false,
     "response": string, # let them know what you will do next with as little detail as possible
     "action": "ACTION"
+}
+
+If you need to search the web:
+{
+    "more_info_required": false,
+    "response": string, # the search query
+    "action": "WEB_SEARCH"
 }
 """
 
@@ -154,7 +164,13 @@ class Agent:
 
         elif more_info_required == True:
             return response
-
+        
+        # If the action is to search the web, respond directly with perplexity results
+        if action.lower() == ActionType.WEB_SEARCH.value:
+            audio_data = await stream_to_elevenlabs("searching the web...")
+            await handle_audio_output(audio_data, output_mode="speak")
+            return perplexity_search(response)
+        
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action))
@@ -171,14 +187,11 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/email_task.txt", "r").read()
+        transcript = open("testing/web_search.txt", "r").read()    
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
-        with open("test_output.mp3", "wb") as f:
-            f.write(audio_data)
-        print("Test audio saved to 'test_output.mp3'")
+        await handle_audio_output(audio_data, output_mode="speak")
     finally:
-        # Wait for background tasks before exiting
         await agent.cleanup()
 
 

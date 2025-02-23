@@ -1,0 +1,13 @@
+Alex: Quick question before we move on—does anyone know how much ElevenLabs costs?
+
+Lisa: I remember they have different pricing tiers, but I’m not sure about the details.
+
+Jordan: Yeah, I think it depends on usage, but we should check their latest pricing.
+
+Alex: Good point. Let’s confirm before we budget for it.
+
+Lisa: Hey ElevenLabs, what does the basic ElevenLabs plan cost?
+
+ElevenLabs: To find the current pricing for the basic ElevenLabs plan, I need to search the web. However, can you please confirm if you are looking for monthly or yearly pricing and if there are any specific features you need included in the plan?
+
+Lisa: Monthly.
