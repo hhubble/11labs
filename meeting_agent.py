@@ -197,7 +197,9 @@ class MeetingAgent:
                     if not transcript or transcript == last_transcript:
                         await asyncio.sleep(0.01)
                         continue
-
+                
+                    print("current transcript:\n")
+                    print(transcript)
                     if transcript and not transcript.startswith("ElevenLabs:"):
                         processing = True
                         last_transcript = transcript
@@ -232,6 +234,7 @@ class MeetingAgent:
                                 logger.error(f"Error reinitializing Deepgram: {e}")
 
                         logger.debug("Waiting before processing new input...")
+
                         await asyncio.sleep(1)
                         processing = False
                         logger.info("Ready for new input")
