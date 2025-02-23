@@ -17,6 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from utils.action_handling import ActionHandler
 from utils.agent import Agent
 from utils.logging_config import setup_logging
+from utils.post_meeting_items import send_post_meeting_email
 from utils.STT_utils import AudioTranscriptionHandler
 from utils.TTS_utils import handle_audio_output, handle_audio_to_microphone, stream_to_elevenlabs
 
@@ -34,7 +35,9 @@ class MeetingAgent:
         self.CHANNELS = 1
         self.RATE = 16000
 
-        logger.debug(f"Audio config - CHUNK: {self.CHUNK}, FORMAT: {self.FORMAT}, CHANNELS: {self.CHANNELS}, RATE: {self.RATE}")
+        logger.debug(
+            f"Audio config - CHUNK: {self.CHUNK}, FORMAT: {self.FORMAT}, CHANNELS: {self.CHANNELS}, RATE: {self.RATE}"
+        )
 
         # Initialize audio components
         logger.info("Initializing audio components...")
@@ -153,11 +156,11 @@ class MeetingAgent:
             )
             logger.info("Audio stream opened successfully")
             print("\nListening... (Press Ctrl+C to stop)")
-            
+
             conversation_history = []  # Full conversation history for LLM context
             last_transcript = ""
             processing = False
-            
+
             while True:
                 try:
                     # Don't process new audio while handling a response
@@ -175,7 +178,9 @@ class MeetingAgent:
                     audio_bytes = audio_data_int16.tobytes()
 
                     try:
-                        transcript = await self.transcription_handler.process_audio_chunk(audio_bytes)
+                        transcript = await self.transcription_handler.process_audio_chunk(
+                            audio_bytes
+                        )
                     except Exception as e:
                         if "ConnectionClosed" in str(e):
                             logger.info("Deepgram connection closed, reinitializing...")
@@ -183,7 +188,7 @@ class MeetingAgent:
                             continue
                         else:
                             raise
-                    
+
                     if not transcript or transcript == last_transcript:
                         await asyncio.sleep(0.01)
                         continue
@@ -193,35 +198,37 @@ class MeetingAgent:
                         processing = True
                         last_transcript = transcript
                         logger.info(f"Submitting transcript: {transcript}")
-                        
+
                         # Add user message to conversation history
                         conversation_history.append(f"User: {transcript}")
-                        
+
                         # Send full conversation context to LLM
                         full_context = " ".join(conversation_history)
-                        
-                        response_dict = await self.function_caller.call_llm(full_context, ["haz@pally.com", "wylansford@gmail.com"])
-                        
+
+                        response_dict = await self.function_caller.call_llm(
+                            full_context, ["haz@pally.com", "wylansford@gmail.com"]
+                        )
+
                         response = response_dict.get("response")
                         if response:
                             print(f"\n💬 Response: {response}")
                             logger.info("Generating audio response...")
                             audio_data = await stream_to_elevenlabs(response)
                             logger.info("Playing audio response...")
-                            
+
                             # Play the response
                             await handle_audio_output(audio_data, output_mode="speak")
-                            
+
                             # Add agent response to conversation history
                             conversation_history.append(f"ElevenLabs: {response}")
-                            
+
                             # Reinitialize Deepgram connection after response
                             try:
                                 await self.transcription_handler.close()
                                 await self.transcription_handler.initialize_connection()
                             except Exception as e:
                                 logger.error(f"Error reinitializing Deepgram: {e}")
-                        
+
                         # Wait a bit before processing new input to avoid feedback
                         await asyncio.sleep(1)
                         processing = False
@@ -263,21 +270,23 @@ async def main():
         meet_url = "https://meet.google.com/fbb-gsfv-osg?authuser=0"
         email = "elevenlabsagent@gmail.com"
         password = os.environ.get("GOOGLE_PASSWORD")
-        
+
         # logger.info("Attempting to join meeting...")
         # if await agent.join_meeting(meet_url, email, password):
-            # logger.info("Successfully joined meeting, starting audio processing...")
+        # logger.info("Successfully joined meeting, starting audio processing...")
         await agent.process_audio()
         # else:
-            # logger.error("Failed to join meeting")
+        # logger.error("Failed to join meeting")
     except Exception as e:
         logger.exception("Critical error in main process")
     finally:
         logger.info("Starting cleanup process...")
         await agent.cleanup()
 
+    agent.transcription_handler._full_transcript
+    full_transcript = agent.transcription_handler.get_full_transcript()
+    await send_post_meeting_email(full_transcript)
 
-import litellm
 
 # async def generate_email_summary(transcript, action_items):
 #     litellm.completion(
@@ -289,4 +298,5 @@ import litellm
 if __name__ == "__main__":
     print("\nStarting Meeting Agent...")
     print("Press Ctrl+C to stop\n")
+    asyncio.run(main())
     asyncio.run(main())

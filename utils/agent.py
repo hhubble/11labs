@@ -12,6 +12,7 @@ from utils.action_handling import ActionHandler
 from utils.action_type import ActionType
 from utils.api.perplexity import perplexity_search
 from utils.logging_config import setup_logging
+from utils.post_meeting_items import send_post_meeting_email
 from utils.TTS_utils import handle_audio_output, stream_to_elevenlabs
 
 setup_logging(log_file=Path("logs/app.log"), log_level="INFO")
@@ -230,6 +231,7 @@ class Agent:
         if self.background_tasks:
             print(f"Waiting for {len(self.background_tasks)} background tasks to complete...")
             await asyncio.gather(*self.background_tasks)
+
 
 
 if __name__ == "__main__":

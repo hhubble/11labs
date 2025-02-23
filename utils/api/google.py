@@ -120,20 +120,21 @@ class GoogleAPI:
             print(f"An error occurred: {e}")
             return None
 
-    def send_email(self, to, subject, body):
+    def send_email(self, to, subject, body, is_html=False):
         """Sends an email using Gmail API.
 
         Args:
             to (str): Recipient's email address
             subject (str): Email subject
             body (str): Email body content
+            is_html (bool): Whether the body contains HTML content
         """
         try:
             import base64
             from email.mime.text import MIMEText
 
-            # Create message
-            message = MIMEText(body)
+            # Create message with appropriate content type
+            message = MIMEText(body, "html" if is_html else "plain")
             message["to"] = to
             message["subject"] = subject
 
@@ -465,5 +466,4 @@ def authenticate():
 
 
 if __name__ == "__main__":
-    authenticate()
     authenticate()
