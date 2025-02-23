@@ -228,16 +228,18 @@ class Agent:
             await asyncio.gather(*self.background_tasks)
 
 
-async def test_agent():
-    agent = Agent()
-    try:
-        participant_emails = ["haz@pally.com", "wylansford@gmail.com", "lisa@pally.com"]
-        transcript = open("testing/cal_event.txt", "r").read()
-        response = await agent.call_llm(transcript, participant_emails)
-        audio_data = await stream_to_elevenlabs(response)
-        await handle_audio_output(audio_data, output_mode="speak")
-    finally:
-        await agent.cleanup()
+if __name__ == "__main__":
+
+    async def test_agent():
+        agent = Agent()
+        try:
+            participant_emails = ["haz@pally.com", "wylansford@gmail.com", "lisa@pally.com"]
+            transcript = open("testing/cal_event.txt", "r").read()
+            response = await agent.call_llm(transcript, participant_emails)
+            audio_data = await stream_to_elevenlabs(response)
+            await handle_audio_output(audio_data, output_mode="speak")
+        finally:
+            await agent.cleanup()
 
 
 async def test_agent_text():
@@ -253,8 +255,6 @@ async def test_agent_text():
     finally:
         await agent.cleanup()
 
-
-if __name__ == "__main__":
     # Run the tests
     # asyncio.run(test_agent())  # Comment out or remove the original test
     asyncio.run(test_agent_text())
