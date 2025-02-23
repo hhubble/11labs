@@ -34,7 +34,7 @@ async def extract_search_details(query: str) -> Dict[str, str]:
     """
 
     response = await acompletion(
-        model="groq/mixtral-8x7b-32768",
+        model="groq/llama-3.3-70b-versatile",
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": query}],
         api_key=os.getenv("GROQ_API_KEY"),
     )
