@@ -1,0 +1,21 @@
+Haz: Alright, team, let's go over our key action items for the week. First up—Lisa, where do we stand on the user onboarding improvements?
+
+Lisa: We've streamlined the flow and removed unnecessary steps, but we still need to test how it impacts sign-up conversion.
+
+Wyatt: Good call. We should A/B test it with a small user segment before rolling it out fully.
+
+Haz: Agreed. Hey ElevenLabs, please create a task to set up an A/B test for the new onboarding flow.
+
+Lisa: Next, we need to finalize our investor outreach plan. Have we drafted the email template yet?
+
+Wyatt: I started one, but it still needs a bit of polish before we send it out.
+
+Haz: Let's review it together later today. Hey ElevenLabs, please create a task to finalize the investor outreach email.
+
+Lisa: Also, we talked about hosting a live demo session for early adopters. Have we picked a date?
+
+Wyatt: Not yet, but we were thinking sometime next week.
+
+Haz: Let's go with Thursday at 3 PM. That should give us enough time to prepare.
+
+Lisa: Hey ElevenLabs, please create a calendar event for the live demo session on Thursday at 3 PM.

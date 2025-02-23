@@ -8,7 +8,7 @@ from utils.tasks.notion_tasks import handle_new_notion_note
 logger = logging.getLogger(__name__)
 
 class ActionHandler:
-    async def process_action(self, action_type: ActionType, transcript: str) -> dict:
+    async def process_action(self, action_type: ActionType, transcript: str, participant_emails: list[str]) -> dict:
         logger.info(f"Processing action of type: {action_type}")
         try:
             if action_type == ActionType.EMAIL_CREATION:
@@ -16,7 +16,7 @@ class ActionHandler:
                 return {"success": result}
 
             elif action_type == ActionType.CALENDAR_EVENT:
-                result = await handle_calendar_event(transcript)
+                result = await handle_calendar_event(transcript, participant_emails)
                 return {"success": result}
 
             elif action_type == ActionType.NOTE_CREATION:

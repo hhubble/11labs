@@ -1,22 +1,22 @@
-Alex: Alright, thanks for joining, everyone. Let’s get started. We need to finalize the feature list for the next sprint. Lisa, do you have the latest updates from the design team?
+Haz: Alright, thanks for joining, everyone. Let's get started. We need to finalize the feature list for the next sprint. Lisa, do you have the latest updates from the design team?
 
-Lisa: Yeah, I spoke with them this morning. They’ve finalized the new UI for the dashboard, but they’re waiting on feedback before moving to development.
+Lisa: Yeah, I spoke with them this morning. They've finalized the new UI for the dashboard, but they're waiting on feedback before moving to development.
 
-Jordan: I took a quick look, and it seems solid. The only concern is the loading performance—some elements take a bit too long to render.
+Wyatt: I took a quick look, and it seems solid. The only concern is the loading performance—some elements take a bit too long to render.
 
-Alex: Good call. Let’s add a performance check before we approve it. Anything else?
+Haz: Good call. Let's add a performance check before we approve it. Anything else?
 
-Lisa: We also need to decide on the notification logic. Right now, it’s just basic alerts, but we discussed adding priority levels.
+Lisa: We also need to decide on the notification logic. Right now, it's just basic alerts, but we discussed adding priority levels.
 
-Jordan: I think we should, especially for time-sensitive actions. Maybe low, medium, and high priority?
+Wyatt: I think we should, especially for time-sensitive actions. Maybe low, medium, and high priority?
 
-Alex: That makes sense. We can store it as a field in the database and adjust how notifications appear based on priority.
+Haz: That makes sense. We can store it as a field in the database and adjust how notifications appear based on priority.
 
-Lisa: Sounds good. We’ll need to update the API to support that.
+Lisa: Sounds good. We'll need to update the API to support that.
 
-Jordan: Right. And we should also define default settings for notifications—maybe let users customize them later.
+Wyatt: Right. And we should also define default settings for notifications—maybe let users customize them later.
 
-Alex: Agreed. Let’s create a task for implementing priority-based notifications.
+Haz: Agreed. Let's create a task for implementing priority-based notifications.
 
 Lisa: Hey ElevenLabs, please create a task for that.
 

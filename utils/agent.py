@@ -11,7 +11,10 @@ from utils.api.perplexity import perplexity_search
 
 import dotenv
 import litellm
+from utils.logging_config import setup_logging
+from pathlib import Path
 
+setup_logging(log_file=Path("logs/app.log"), log_level="INFO")
 logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
@@ -61,6 +64,7 @@ You can perform the following actions:
 - description: The description of the event (you can assume this based on the context)
 - start_time: The start time of the event (ask for this if it's not clear)
 - duration: The duration of the event (ask for this if it's not clear)
+- attendees: A list of attendees for the event (ask for this if it's not clear)
 
 ### NOTE_CREATION
 - title: The title of the note (you can assume this based on the context)
@@ -113,7 +117,7 @@ class Agent:
         self.action_handler = ActionHandler()  # Initialize the action handler
         logger.info(f"Initialized Agent with model: {self.model}")    
     
-    async def perform_action(self, transcript: str, action: str) -> None:
+    async def perform_action(self, transcript: str, action: str, participant_emails: list[str]) -> None:
         try:
             # Convert string action to ActionType enum
             action_type = ActionType[action.upper()]
@@ -121,7 +125,8 @@ class Agent:
             # Process the action using the action handler
             await self.action_handler.process_action(
                 action_type=action_type,
-                transcript=transcript
+                transcript=transcript,
+                participant_emails=participant_emails
             )
         except Exception as e:
             print(f"Error performing action {action}: {e}")
@@ -129,14 +134,14 @@ class Agent:
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
-    async def call_llm(self, transcript: str) -> str:
+    async def call_llm(self, transcript: str, participant_emails: list[str]) -> str:
         print("Calling LLM...")
         messages = [
             {
                 "role": "system",
                 "content": agent_system_prompt,
             },
-            {"role": "user", "content": transcript},
+            {"role": "user", "content": f"Participant Emails: {participant_emails}\n\nTranscript: {transcript}"},
         ]
 
         response = litellm.completion(
@@ -173,7 +178,7 @@ class Agent:
         
         else:
             # Create a task and add it to our set
-            task = asyncio.create_task(self.perform_action(transcript, action))
+            task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
             return response
 
@@ -187,8 +192,9 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/take_note.txt", "r").read()    
-        response = await agent.call_llm(transcript)
+        participant_emails = ["haz@pally.com", "wylansford@gmail.com", "lisa@pally.com"]
+        transcript = open("testing/cal_event.txt", "r").read()    
+        response = await agent.call_llm(transcript, participant_emails)
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")
     finally:
