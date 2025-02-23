@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-
-
 agent_system_prompt = """
 ## TASK
 You are an executive assistant to busy executives. Your job is to interpret the needs of the team within a meeting, ask for more information if needed, and then perform the necessary actions.
