@@ -28,6 +28,8 @@ Your task is to create a calendar event based on the provided transcript.
 
 You're provided the full meeting transcript, and the user may have asked multiple questions throughout the meeting. Ensure you act on only the most recent request (at the end of the transcript).
 
+You must calculate the end time of the event based on the duration of the event.
+
 ## OUTPUT
 You must respond JSON format only with no additional text before or after. Use the following format:
 {
@@ -36,8 +38,11 @@ You must respond JSON format only with no additional text before or after. Use t
     "description": string,
     "start_time": string,
     "end_time": string,
-    "attendees": [string]
+    "attendee_emails": [string]
 }
+
+### Date Format
+- ISO format (e.g., "YYYY-MM-DDTHH:MM:SS+HH:MM")
 """
 
 async def handle_email_creation(transcript: str) -> bool:
@@ -84,7 +89,7 @@ async def handle_email_creation(transcript: str) -> bool:
         logger.exception(f"Error processing email creation: {e}")
         return False
 
-async def handle_calendar_event(transcript: str) -> bool:
+async def handle_calendar_event(transcript: str, participant_emails: list[str]) -> bool:
     try:
         logger.info("Processing calendar event creation request")
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -95,7 +100,7 @@ async def handle_calendar_event(transcript: str) -> bool:
                 "role": "system",
                 "content": calendar_system_prompt,
             },
-            {"role": "user", "content": f"The current UTC time is: {current_time}\n\n{transcript}"},
+            {"role": "user", "content": f"The current UTC time is: {current_time}\n\nParticipant Emails: {participant_emails}\n\nTranscript: {transcript}"},
         ]
 
         response = litellm.completion(
@@ -112,10 +117,18 @@ async def handle_calendar_event(transcript: str) -> bool:
         description = response_json.get("description", None)
         start_time = response_json.get("start_time", None)
         end_time = response_json.get("end_time", None)
-        attendees = response_json.get("attendees", [])
+        attendee_emails = response_json.get("attendee_emails", [])
         
-        if not (title and location and description and start_time and end_time and attendees):
-            logger.error("Missing required fields in response")
+        if not (title and description and start_time and end_time and attendee_emails):
+            field_checks = {
+                'title': title,
+                'description': description,
+                'start_time': start_time,
+                'end_time': end_time,
+                'attendee_emails': attendee_emails
+            }
+            missing_fields = [field for field, value in field_checks.items() if not value]
+            logger.error(f"Missing required fields in response: {missing_fields}")
             return False
         
         google_api = GoogleAPI()
@@ -124,7 +137,7 @@ async def handle_calendar_event(transcript: str) -> bool:
             logger.error("Failed to authenticate with Google")
             return False
         
-        google_api.create_event(title, location, description, start_time, end_time, attendees)
+        google_api.create_event(title, location, description, start_time, end_time, attendee_emails)
         
         return True
     except Exception as e:

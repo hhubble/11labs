@@ -60,16 +60,19 @@ class GoogleAPI:
             attendees (list): Optional list of attendee email addresses
         """
         try:
+            print(
+                f"Creating event: {title} at {start_time} to {end_time}. Location: {location}. Description: {description}. Attendees: {attendees}."
+            )
             event = {
                 "summary": title,
                 "location": location,
                 "description": description,
                 "start": {
-                    "dateTime": start_time.isoformat(),
+                    "dateTime": start_time,
                     "timeZone": "UTC",
                 },
                 "end": {
-                    "dateTime": end_time.isoformat(),
+                    "dateTime": end_time,
                     "timeZone": "UTC",
                 },
             }

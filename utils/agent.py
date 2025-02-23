@@ -2,16 +2,15 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict
 
 import dotenv
 import litellm
 
-from utils.action_handling import ActionHandler
-from utils.action_type import ActionType
-from utils.api.perplexity import perplexity_search
-from utils.TTS_utils import handle_audio_output, stream_to_elevenlabs
+from utils.logging_config import setup_logging
 
+setup_logging(log_file=Path("logs/app.log"), log_level="INFO")
 logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
@@ -29,7 +28,7 @@ Decide if you have all the information you need to perform the action. If you do
 If the user asks you to search the web, or if you need to search the web to answer the user's question, simply proceed with the web search. Don't ask for confirmation or for additional information. Use the response field to write the search query.
 
 ## RESPONSE
-You must respond with a JSON object in the following format:
+You must respond with a JSON object in the below format. Do not include any other text before or after the JSON object.
 {
     "more_info_required": bool,
     "response": string,
@@ -61,6 +60,7 @@ You can perform the following actions:
 - description: The description of the event (you can assume this based on the context)
 - start_time: The start time of the event (ask for this if it's not clear)
 - duration: The duration of the event (ask for this if it's not clear)
+- attendees: A list of attendees for the event (ask for this if it's not clear)
 
 ### NOTE_CREATION
 - title: The title of the note (you can assume this based on the context)
@@ -93,7 +93,7 @@ If more info is required:
 If you have all the information you need:
 {
     "more_info_required": false,
-    "response": string, # let them know what you will do next with as little detail as possible
+    "response": string, # let them know what you will do next with as little detail as possible, ie. I created the task, I sent the email, I added the event to the calendar, etc...
     "action": "ACTION"
 }
 
@@ -105,16 +105,6 @@ If you need to search the web:
 }
 """
 
-function_calling_system_prompt = """
-You are an executive assistant to busy executives. Your job is to interpret the needs of the team within a meeting, ask for more information if needed, and then perform the necessary actions.
-
-Your name is "ElevenLabs" -- you will know the user is speaking to you if they say "Hey ElevenLabs" or something similar, followed by a query. 
-
-You will be provided with the full meeting transcript for context. The user may have asked multiple questions thoughtout the meeting, so ensure you're responding to the most recent query (at the end of the transcript).
-
-You have already gathered all the information you need to perform the action. You must perform the action now.
-"""
-
 
 class Agent:
     def __init__(self):
@@ -123,27 +113,36 @@ class Agent:
         self.action_handler = ActionHandler()  # Initialize the action handler
         logger.info(f"Initialized Agent with model: {self.model}")
 
-    async def perform_action(self, transcript: str, action: str) -> None:
+    async def perform_action(
+        self, transcript: str, action: str, participant_emails: list[str]
+    ) -> None:
         try:
             # Convert string action to ActionType enum
             action_type = ActionType[action.upper()]
             print(f"Performing action: {action_type}")
             # Process the action using the action handler
-            await self.action_handler.process_action(action_type=action_type, transcript=transcript)
+            await self.action_handler.process_action(
+                action_type=action_type,
+                transcript=transcript,
+                participant_emails=participant_emails,
+            )
         except Exception as e:
             print(f"Error performing action {action}: {e}")
         finally:
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
-    async def call_llm(self, transcript: str) -> str:
+    async def call_llm(self, transcript: str, participant_emails: list[str]) -> Dict[str, bool]:
         print("Calling LLM...")
         messages = [
             {
                 "role": "system",
                 "content": agent_system_prompt,
             },
-            {"role": "user", "content": transcript},
+            {
+                "role": "user",
+                "content": f"Participant Emails: {participant_emails}\n\nTranscript: {transcript}",
+            },
         ]
 
         response = litellm.completion(
@@ -151,8 +150,13 @@ class Agent:
         )
 
         response_content = response.choices[0].message.content
-        print(f"LLM Response: {response_content}")
-        response_json = json.loads(response_content)
+
+        try:
+            response_json = json.loads(response_content)
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON: {response_content}")
+            raise
+
         print(f"LLM Response: {response_json}")
 
         more_info_required = response_json.get("more_info_required")
@@ -160,22 +164,23 @@ class Agent:
         action = response_json.get("action")
 
         if action.lower() == ActionType.NO_ACTION.value:
-            return None
+            return {"response": None, "more_info_required": False}
 
         elif more_info_required == True:
-            return response
+            return {"response": response, "more_info_required": True}
 
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
-            return perplexity_search(response)
+            perplexity_results = perplexity_search(response)
+            return {"response": perplexity_results, "more_info_required": False}
 
         else:
             # Create a task and add it to our set
-            task = asyncio.create_task(self.perform_action(transcript, action))
+            task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
-            return response
+            return {"response": response, "more_info_required": False}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
@@ -187,8 +192,9 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/web_search.txt", "r").read()
-        response = await agent.call_llm(transcript)
+        participant_emails = ["haz@pally.com", "wylansford@gmail.com", "lisa@pally.com"]
+        transcript = open("testing/cal_event.txt", "r").read()
+        response = await agent.call_llm(transcript, participant_emails)
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")
     finally:
@@ -197,4 +203,5 @@ async def test_agent():
 
 if __name__ == "__main__":
     # Run the tests
+    asyncio.run(test_agent())
     asyncio.run(test_agent())
