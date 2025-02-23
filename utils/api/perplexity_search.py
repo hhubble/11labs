@@ -26,7 +26,7 @@ def perplexity_search(query: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "Be veryconcise and don't use markdown. Just return the pure text.",
+                "content": "Be very concise and don't use markdown. Just return the pure text.",
             },
             {"role": "user", "content": query},
         ],

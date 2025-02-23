@@ -21,6 +21,7 @@ class AudioTranscriptionHandler:
         self._is_listening_active = False
         self._current_text = ""
         self._transcription_buffer = []
+        self._full_transcript = []
 
     async def initialize_connection(self):
         try:
@@ -59,12 +60,14 @@ class AudioTranscriptionHandler:
                                 )
                                 print(f"\n🎯 Activated! Full context: '{context}'")
                                 parent._is_listening_active = True
+                                parent._full_transcript.append(cleaned_transcript)
                                 break
 
                     elif parent._is_listening_active:
                         logger.info(f"🎤 Final transcription: '{cleaned_transcript}'")
                         print(f"🎤 {cleaned_transcript}")
                         parent._current_text = cleaned_transcript
+                        parent._full_transcript.append(cleaned_transcript)
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -127,6 +130,10 @@ class AudioTranscriptionHandler:
         self._is_listening_active = False
         self._current_text = ""
         self._transcription_buffer.clear()
+        self._full_transcript.clear()
+
+    def get_full_transcript(self) -> str:
+        return " ".join(self._full_transcript)
 
 
 async def process_audio_to_text(audio_bytes: bytes):
