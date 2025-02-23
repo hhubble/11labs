@@ -1,7 +1,7 @@
 venv/
 .venv/
 .env
-
+credentials.json
 
 # Logs
 logs/
