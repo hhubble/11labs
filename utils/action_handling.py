@@ -1,11 +1,8 @@
 import logging
 from typing import Any, Dict
-
 from utils.action_type import ActionType
-from utils.TTS_utils import stream_to_elevenlabs
 
 logger = logging.getLogger(__name__)
-
 
 class ActionHandler:
     async def handle_web_search(self, details: dict) -> str:
@@ -38,23 +35,11 @@ class ActionHandler:
         # TODO: Implement Linear task creation
         return "I'll create that task in Linear."
 
-    async def handle_voice_message(self, text: str, details: dict) -> bytes:
-        logger.info("Processing voice message request")
-        logger.debug(f"Voice message text: {text[:100]}...")
-        response = f"{text}"
-        return await stream_to_elevenlabs(response)
-
-    async def handle_unknown(self, text: str) -> bytes:
-        logger.warning(f"Received unknown action request: {text[:100]}...")
-        response = "I'm not sure how to help with that. Could you please rephrase?"
-        return await stream_to_elevenlabs(response)
-
     async def process_action(self, action_type: ActionType, text: str, details: dict) -> dict:
         logger.info(f"Processing action of type: {action_type}")
         try:
             if action_type == ActionType.WEB_SEARCH:
                 result = await self.handle_web_search(details)
-                #TODO 
                 return {"type": "text", "content": result}
 
             elif action_type == ActionType.EMAIL_CREATION:
@@ -72,14 +57,12 @@ class ActionHandler:
             elif action_type == ActionType.LINEAR_TASK:
                 result = await self.handle_linear_task(details)
                 return {"type": "text", "content": result}
+            
+            else:
+                logger.warning(f"Received unknown action request: {text[:100]}...")
+                response = "I'm not sure how to help with that. Could you please rephrase?"
+                return {"type": "text", "content": response}
 
-            elif action_type == ActionType.VOICE_MESSAGE:
-                audio = await self.handle_voice_message(text, details)
-                return {"type": "audio", "content": audio}
-
-            else:  # UNKNOWN
-                audio = await self.handle_unknown(text)
-                return {"type": "audio", "content": audio}
 
         except Exception as e:
             logger.exception(f"Error processing action: {e}")
