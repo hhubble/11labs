@@ -196,7 +196,6 @@ async def test_agent():
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")
     finally:
-        # Wait for background tasks before exiting
         await agent.cleanup()
 
 
