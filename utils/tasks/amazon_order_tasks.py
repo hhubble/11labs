@@ -87,11 +87,11 @@ async def click_with_retry(driver, element, max_retries=3):
             except Exception:
                 if attempt == max_retries - 1:
                     raise
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
         except StaleElementReferenceException:
             if attempt == max_retries - 1:
                 raise
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
     return False
 
 
