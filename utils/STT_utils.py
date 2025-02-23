@@ -11,7 +11,7 @@ class AudioTranscriptionHandler:
     def __init__(
         self,
         trigger_phrases={"hey eleven labs", "hey 11 labs", "hey eleven laps", "hey 11 laps"},
-        buffer_size=5,
+        buffer_size=10,
     ):
         self.deepgram = DeepgramClient(os.environ.get("DEEPGRAM_API_KEY"))
         self.dg_connection = None
@@ -21,6 +21,8 @@ class AudioTranscriptionHandler:
         self._is_listening_active = False
         self._current_text = ""
         self._transcription_buffer = []
+        self._full_transcript = []
+        self.context_grew = False
 
     async def initialize_connection(self):
         try:
@@ -32,39 +34,26 @@ class AudioTranscriptionHandler:
                     return
 
                 transcript = result.channel.alternatives[0].transcript.lower()
-                cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
+                # cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
                 is_final = result.is_final
-
-                if not cleaned_transcript:
-                    return
 
                 if is_final:
                     # Keep only the last buffer_size transcripts
-                    parent._transcription_buffer.append(cleaned_transcript)
-                    if len(parent._transcription_buffer) > parent.buffer_size:
-                        parent._transcription_buffer.pop(0)
+                    # parent._transcription_buffer.append(cleaned_transcript)
+                    # if len(parent._transcription_buffer) > parent.buffer_size:
+                    #     parent._transcription_buffer.pop(0)
 
-                    logger.info(f"cleaned_transcript: {cleaned_transcript}")
-                    logger.info(f"is_listening_active: {parent._is_listening_active}")
+                    # logger.info(f"cleaned_transcript: {cleaned_transcript}")
+                    # logger.info(f"is_listening_active: {parent._is_listening_active}")
 
                     # Get the last few chunks combined
-                    context = " ".join(parent._transcription_buffer)
-
-                    # Check if any trigger phrase is in the combined context
-                    if not parent._is_listening_active:
-                        for trigger in parent.trigger_phrases:
-                            if trigger in context:
-                                logger.info(
-                                    f"🎯 Trigger phrase detected. Full context: '{context}'"
-                                )
-                                print(f"\n🎯 Activated! Full context: '{context}'")
-                                parent._is_listening_active = True
-                                break
-
-                    elif parent._is_listening_active:
-                        logger.info(f"🎤 Final transcription: '{cleaned_transcript}'")
-                        print(f"🎤 {cleaned_transcript}")
-                        parent._current_text = cleaned_transcript
+                    # context = " ".join(parent._transcription_buffer)
+                    self.context_grew = True
+                    parent._full_transcript.append(transcript)
+                    logger.info(f"context_grew: {self.context_grew}")
+                else:
+                    logger.info(f"context_grew: {self.context_grew}")
+                    self.context_grew = False
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -87,6 +76,7 @@ class AudioTranscriptionHandler:
                 language="en",
                 smart_format=True,
                 interim_results=True,
+                endpointing=500,
             )
 
             if not await self.dg_connection.start(options):
@@ -96,20 +86,20 @@ class AudioTranscriptionHandler:
             logger.exception(f"Error initializing Deepgram connection: {e}")
             raise
 
-    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str, str]:
+    async def process_audio_chunk(self, audio_bytes: bytes) -> tuple[bool, str]:
         try:
             if not self.dg_connection:
                 await self.initialize_connection()
 
             # Capture and clear text before processing new chunk
-            text = self._current_text
+            # text = self._current_text
             self._current_text = ""  # Clear before processing new chunk
 
             # Get context and send new audio data
-            context = " ".join(self._transcription_buffer) if self._transcription_buffer else ""
+            context = " ".join(self._full_transcript) if self._full_transcript else ""
             await self.dg_connection.send(audio_bytes)
 
-            return self._is_listening_active, text, context
+            return self._is_listening_active, context
 
         except Exception as e:
             logger.exception(f"Error processing audio chunk: {e}")
@@ -126,7 +116,12 @@ class AudioTranscriptionHandler:
     def reset_listening_state(self):
         self._is_listening_active = False
         self._current_text = ""
-        self._transcription_buffer.clear()
+        # self._transcription_buffer.clear()
+        # self._full_transcript.clear()
+
+    #
+    def get_full_transcript(self) -> str:
+        return " ".join(self._full_transcript)
 
 
 async def process_audio_to_text(audio_bytes: bytes):

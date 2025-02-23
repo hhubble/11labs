@@ -1,18 +1,18 @@
+import asyncio
 import json
 import logging
 import os
-import asyncio
+from pathlib import Path
 from typing import Any, Dict
-
-from utils.action_handling import ActionHandler
-from utils.action_type import ActionType
-from utils.TTS_utils import stream_to_elevenlabs, handle_audio_output
-from utils.api.perplexity import perplexity_search
 
 import dotenv
 import litellm
+
+from utils.action_handling import ActionHandler
+from utils.action_type import ActionType
+from utils.api.perplexity import perplexity_search
 from utils.logging_config import setup_logging
-from pathlib import Path
+from utils.TTS_utils import handle_audio_output, stream_to_elevenlabs
 
 setup_logging(log_file=Path("logs/app.log"), log_level="INFO")
 logger = logging.getLogger(__name__)
@@ -115,9 +115,13 @@ class Agent:
         self.model = "groq/llama-3.3-70b-versatile"
         self.background_tasks = set()  # Keep track of background tasks
         self.action_handler = ActionHandler()  # Initialize the action handler
-        logger.info(f"Initialized Agent with model: {self.model}")    
-    
-    async def perform_action(self, transcript: str, action: str, participant_emails: list[str]) -> None:
+        logger.info(f"Initialized Agent with model: {self.model}")
+        self.is_active = False
+
+
+    async def perform_action(
+        self, transcript: str, action: str, participant_emails: list[str]
+    ) -> None:
         try:
             # Convert string action to ActionType enum
             action_type = ActionType[action.upper()]
@@ -126,62 +130,72 @@ class Agent:
             await self.action_handler.process_action(
                 action_type=action_type,
                 transcript=transcript,
-                participant_emails=participant_emails
+                participant_emails=participant_emails,
             )
         except Exception as e:
             print(f"Error performing action {action}: {e}")
         finally:
+            self.is_active = False
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
     async def call_llm(self, transcript: str, participant_emails: list[str]) -> Dict[str, bool]:
+        if self.is_active:
+            return {"response": None, "taking_action": True}
+
+        self.is_active = True
         print("Calling LLM...")
         messages = [
             {
                 "role": "system",
                 "content": agent_system_prompt,
             },
-            {"role": "user", "content": f"Participant Emails: {participant_emails}\n\nTranscript: {transcript}"},
+            {
+                "role": "user",
+                "content": f"Participant Emails: {participant_emails}\n\nTranscript: {transcript}",
+            },
         ]
 
         response = litellm.completion(
-            model=self.model,
-            messages=messages,
-            api_key=os.getenv("GROQ_API_KEY")
+            model=self.model, messages=messages, api_key=os.getenv("GROQ_API_KEY")
         )
-        
+
         response_content = response.choices[0].message.content
-        
+
         try:
             response_json = json.loads(response_content)
         except json.JSONDecodeError:
             print(f"Error decoding JSON: {response_content}")
             raise
-        
+
         print(f"LLM Response: {response_json}")
-        
+
         more_info_required = response_json.get("more_info_required")
         response = response_json.get("response")
         action = response_json.get("action")
-        
+
         if action.lower() == ActionType.NO_ACTION.value:
-            return {"response": None, "more_info_required": False}
-        
+            self.is_active = False
+            return {"response": None, "taking_action": False}
+
         elif more_info_required == True:
-            return {"response": response, "more_info_required": True}
-        
+            self.is_active = False
+            return {"response": response, "taking_action": False}
+
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
             perplexity_results = perplexity_search(response)
-            return {"response": perplexity_results, "more_info_required": False}
-        
+            self.is_active = False
+            return {"response": perplexity_results, "taking_action": False}
+
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
-            return {"response": response, "more_info_required": False}
+            self.is_active = True
+            return {"response": response, "taking_action": True}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
@@ -194,7 +208,7 @@ async def test_agent():
     agent = Agent()
     try:
         participant_emails = ["haz@pally.com", "wylansford@gmail.com", "lisa@pally.com"]
-        transcript = open("testing/cal_event.txt", "r").read()    
+        transcript = open("testing/cal_event.txt", "r").read()
         response = await agent.call_llm(transcript, participant_emails)
         audio_data = await stream_to_elevenlabs(response)
         await handle_audio_output(audio_data, output_mode="speak")
@@ -204,4 +218,8 @@ async def test_agent():
 
 if __name__ == "__main__":
     # Run the tests
+    asyncio.run(test_agent())
+    asyncio.run(test_agent())
+    asyncio.run(test_agent())
+    asyncio.run(test_agent())
     asyncio.run(test_agent())
