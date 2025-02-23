@@ -52,6 +52,8 @@ You can perform the following actions:
 - CALENDAR_EVENT: Create or modify a calendar event
 - NOTE_CREATION: Create a new note or document
 - LINEAR_TASK: Create a new task in Linear
+- CATCH_ME_UP: Give me a summary of what has happened so far in the meeting
+- AMAZON_ORDER: Add an item to the Amazon cart
 
 ## REQUIRED INFORMATION
 
@@ -79,6 +81,11 @@ You can perform the following actions:
 - description: The description of the task (you can assume this based on the context)
 - priority: The priority of the task (ask for this if it's not clear)
 - due_date: The due date of the task (ask for this if it's not clear)
+
+### CATCH_ME_UP
+
+### AMAZON_ORDER
+- query: The query to search the web for (you can assume this based on the context)
 
 ### NO_ACTION
 - If no action is requested or the user hasn't asked ElevenLabs to do anything, return {"no_action": "true"}
@@ -231,7 +238,6 @@ class Agent:
         if self.background_tasks:
             print(f"Waiting for {len(self.background_tasks)} background tasks to complete...")
             await asyncio.gather(*self.background_tasks)
-
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ActionType(Enum):
     NO_ACTION = "no_action"
     REQUEST_INFO = "request_info"
@@ -8,3 +9,5 @@ class ActionType(Enum):
     CALENDAR_EVENT = "calendar_event"
     NOTE_CREATION = "note_creation"
     LINEAR_TASK = "linear_task"
+    CATCH_ME_UP = "catch_me_up"
+    AMAZON_ORDER = "amazon_order"

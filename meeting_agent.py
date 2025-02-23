@@ -301,4 +301,3 @@ if __name__ == "__main__":
     print("\nStarting Meeting Agent...")
     print("Press Ctrl+C to stop\n")
     asyncio.run(main())
-    asyncio.run(main())
