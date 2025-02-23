@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from utils.action_handling import ActionHandler
 from utils.action_type import ActionType
-from utils.TTS_utils import stream_to_elevenlabs
+from utils.TTS_utils import stream_to_elevenlabs, handle_audio_output
 from utils.api.perplexity import perplexity_search
 
 import dotenv
@@ -171,6 +171,8 @@ class Agent:
         
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
+            audio_data = await stream_to_elevenlabs("searching the web...")
+            await handle_audio_output(audio_data, output_mode="speak")
             return perplexity_search(response)
         
         else:
@@ -189,12 +191,10 @@ class Agent:
 async def test_agent():
     agent = Agent()
     try:
-        transcript = open("testing/long_web_search.txt", "r").read()    
+        transcript = open("testing/web_search.txt", "r").read()    
         response = await agent.call_llm(transcript)
         audio_data = await stream_to_elevenlabs(response)
-        with open("test_output.mp3", "wb") as f:
-            f.write(audio_data)
-        print("Test audio saved to 'test_output.mp3'")
+        await handle_audio_output(audio_data, output_mode="speak")
     finally:
         # Wait for background tasks before exiting
         await agent.cleanup()
