@@ -241,19 +241,18 @@ if __name__ == "__main__":
         finally:
             await agent.cleanup()
 
-
-async def test_agent_text():
-    agent = Agent()
-    try:
-        participant_emails = ["test@example.com"]
-        while True:
-            user_input = input("Enter transcript (or 'quit' to exit): ")
-            if user_input.lower() == "quit":
-                break
-            response = await agent.call_llm(user_input, participant_emails)
-            print("Agent response:", response)
-    finally:
-        await agent.cleanup()
+    async def test_agent_text():
+        agent = Agent()
+        try:
+            participant_emails = ["test@example.com"]
+            while True:
+                user_input = input("Enter transcript (or 'quit' to exit): ")
+                if user_input.lower() == "quit":
+                    break
+                response = await agent.call_llm(user_input, participant_emails)
+                print("Agent response:", response)
+        finally:
+            await agent.cleanup()
 
     # Run the tests
     # asyncio.run(test_agent())  # Comment out or remove the original test
