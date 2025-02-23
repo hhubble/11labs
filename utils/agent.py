@@ -179,6 +179,7 @@ class Agent:
         action = response_json.get("action")
 
         if action.lower() == ActionType.NO_ACTION.value:
+            logger.info("No action required...")
             self.is_active = False
             self.more_info_required = False
             return {
@@ -188,6 +189,7 @@ class Agent:
             }
 
         elif more_info_required == True:
+            logger.info("More info required...")
             self.is_active = False
             self.more_info_required = True
             return {
@@ -198,6 +200,7 @@ class Agent:
 
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
+            logger.info("Doing a web search...")
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
             perplexity_results = perplexity_search(response)
@@ -210,6 +213,7 @@ class Agent:
             }
 
         else:
+            logger.info("Performing action...")
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
