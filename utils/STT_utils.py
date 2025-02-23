@@ -33,41 +33,25 @@ class AudioTranscriptionHandler:
                     return
 
                 transcript = result.channel.alternatives[0].transcript.lower()
-                cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
+                # cleaned_transcript = transcript.replace(",", "").replace(".", "").replace("!", "")
                 is_final = result.is_final
 
-                if not cleaned_transcript:
-                    return
+                # if not cleaned_transcript:
+                #     return
 
                 if is_final:
                     # Keep only the last buffer_size transcripts
-                    parent._transcription_buffer.append(cleaned_transcript)
-                    if len(parent._transcription_buffer) > parent.buffer_size:
-                        parent._transcription_buffer.pop(0)
+                    # parent._transcription_buffer.append(cleaned_transcript)
+                    # if len(parent._transcription_buffer) > parent.buffer_size:
+                    #     parent._transcription_buffer.pop(0)
 
-                    logger.info(f"cleaned_transcript: {cleaned_transcript}")
-                    logger.info(f"is_listening_active: {parent._is_listening_active}")
+                    # logger.info(f"cleaned_transcript: {cleaned_transcript}")
+                    # logger.info(f"is_listening_active: {parent._is_listening_active}")
 
                     # Get the last few chunks combined
-                    context = " ".join(parent._transcription_buffer)
+                    # context = " ".join(parent._transcription_buffer)
 
-                    # Check if any trigger phrase is in the combined context
-                    if not parent._is_listening_active:
-                        for trigger in parent.trigger_phrases:
-                            if trigger in context:
-                                logger.info(
-                                    f"🎯 Trigger phrase detected. Full context: '{context}'"
-                                )
-                                print(f"\n🎯 Activated! Full context: '{context}'")
-                                parent._is_listening_active = True
-                                parent._full_transcript.append(cleaned_transcript)
-                                break
-
-                    elif parent._is_listening_active:
-                        logger.info(f"🎤 Final transcription: '{cleaned_transcript}'")
-                        print(f"🎤 {cleaned_transcript}")
-                        parent._current_text = cleaned_transcript
-                        parent._full_transcript.append(cleaned_transcript)
+                    parent._full_transcript.append(transcript)
 
             async def on_open(self, open, **kwargs):
                 logger.info("🔌 Deepgram connection opened")
@@ -109,7 +93,7 @@ class AudioTranscriptionHandler:
             self._current_text = ""  # Clear before processing new chunk
 
             # Get context and send new audio data
-            context = " ".join(self._transcription_buffer) if self._transcription_buffer else ""
+            context = " ".join(self._full_transcript) if self._full_transcript else ""
             await self.dg_connection.send(audio_bytes)
 
             return self._is_listening_active, context
@@ -129,9 +113,10 @@ class AudioTranscriptionHandler:
     def reset_listening_state(self):
         self._is_listening_active = False
         self._current_text = ""
-        self._transcription_buffer.clear()
-        self._full_transcript.clear()
+        # self._transcription_buffer.clear()
+        # self._full_transcript.clear()
 
+    #
     def get_full_transcript(self) -> str:
         return " ".join(self._full_transcript)
 

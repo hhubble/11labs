@@ -150,21 +150,24 @@ class MeetingAgent:
                     is_active, context = await self.transcription_handler.process_audio_chunk(
                         audio_bytes
                     )
-                    print(f"is_active: {is_active}")
                     print(f"context: {context}")
 
-                    if is_active and context:
+                    if context:
                         logger.info(f"Transcribed text: {context}")
                         print(f"\n🎤 Transcribed: {context}")
 
-                        response = await self.function_caller.call_llm(context)
-                        audio_data = await stream_to_elevenlabs(response)
-                        await handle_audio_output(audio_data, output_mode="speak")
+                        response_dict = await self.function_caller.call_llm(context, [])
+                        response = response_dict.get("response")
+                        taking_action = response_dict.get("taking_action")
+                        if response:
+                            audio_data = await stream_to_elevenlabs(response)
+                            await handle_audio_output(audio_data, output_mode="speak")
+
                         print(f"\n💬 Response: {response}")
 
                         self.transcription_handler.reset_listening_state()
 
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(1)
 
                 except IOError as e:
                     logger.error(f"IOError during audio processing: {e}")
@@ -197,8 +200,8 @@ async def main():
         email = "elevenlabsagent@gmail.com"
         password = os.environ.get("GOOGLE_PASSWORD")
 
-        if await agent.join_meeting(meet_url, email, password):
-            await agent.process_audio()
+        # if await agent.join_meeting(meet_url, email, password):
+        await agent.process_audio()
     except Exception as e:
         logger.exception("Error in main process")
     finally:

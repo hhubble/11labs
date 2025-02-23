@@ -8,7 +8,11 @@ from typing import Any, Dict
 import dotenv
 import litellm
 
+from utils.action_handling import ActionHandler
+from utils.action_type import ActionType
+from utils.api.perplexity import perplexity_search
 from utils.logging_config import setup_logging
+from utils.TTS_utils import handle_audio_output, stream_to_elevenlabs
 
 setup_logging(log_file=Path("logs/app.log"), log_level="INFO")
 logger = logging.getLogger(__name__)
@@ -112,6 +116,7 @@ class Agent:
         self.background_tasks = set()  # Keep track of background tasks
         self.action_handler = ActionHandler()  # Initialize the action handler
         logger.info(f"Initialized Agent with model: {self.model}")
+        self.is_active = False
 
     async def perform_action(
         self, transcript: str, action: str, participant_emails: list[str]
@@ -129,10 +134,15 @@ class Agent:
         except Exception as e:
             print(f"Error performing action {action}: {e}")
         finally:
+            self.is_active = False
             # Remove the task from our set when done
             self.background_tasks.remove(asyncio.current_task())
 
     async def call_llm(self, transcript: str, participant_emails: list[str]) -> Dict[str, bool]:
+        if self.is_active:
+            return {"response": None, "taking_action": True}
+
+        self.is_active = True
         print("Calling LLM...")
         messages = [
             {
@@ -164,23 +174,27 @@ class Agent:
         action = response_json.get("action")
 
         if action.lower() == ActionType.NO_ACTION.value:
-            return {"response": None, "more_info_required": False}
+            self.is_active = False
+            return {"response": None, "taking_action": False}
 
         elif more_info_required == True:
-            return {"response": response, "more_info_required": True}
+            self.is_active = False
+            return {"response": response, "taking_action": False}
 
         # If the action is to search the web, respond directly with perplexity results
         if action.lower() == ActionType.WEB_SEARCH.value:
             audio_data = await stream_to_elevenlabs("searching the web...")
             await handle_audio_output(audio_data, output_mode="speak")
             perplexity_results = perplexity_search(response)
-            return {"response": perplexity_results, "more_info_required": False}
+            self.is_active = False
+            return {"response": perplexity_results, "taking_action": False}
 
         else:
             # Create a task and add it to our set
             task = asyncio.create_task(self.perform_action(transcript, action, participant_emails))
             self.background_tasks.add(task)
-            return {"response": response, "more_info_required": False}
+            self.is_active = True
+            return {"response": response, "taking_action": True}
 
     async def cleanup(self):
         """Wait for all background tasks to complete."""
@@ -203,5 +217,8 @@ async def test_agent():
 
 if __name__ == "__main__":
     # Run the tests
+    asyncio.run(test_agent())
+    asyncio.run(test_agent())
+    asyncio.run(test_agent())
     asyncio.run(test_agent())
     asyncio.run(test_agent())
